@@ -158,6 +158,72 @@ def test_api_error_returns_none(monkeypatch):
     assert result is None
 
 
+def test_ask_json_config_parameters(monkeypatch):
+    """Verify max_output_tokens, timeout_ms, and retry_options are passed correctly."""
+    monkeypatch.setenv("MOCK", "0")
+    monkeypatch.setenv("NO_CACHE", "1")
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = SimpleNamespace(text='{"ok": true}')
+    monkeypatch.setattr(gemma, "get_client", lambda *args, **kwargs: mock_client)
+
+    result = ask_json("config_test", "Prompt", timeout_seconds=30.0)
+    assert result == {"ok": True}
+
+    call_args = mock_client.models.generate_content.call_args
+    assert call_args is not None
+    config = call_args.kwargs.get("config")
+    assert config is not None
+    assert config.max_output_tokens == 1500
+    assert config.http_options.timeout == 30000
+    assert config.http_options.retry_options.attempts == 1
+
+
+def test_thinking_config_env_default(monkeypatch):
+    """Verify GEMMA_THINKING='default' leaves thinking_config as None and raises token cap."""
+    monkeypatch.setenv("MOCK", "0")
+    monkeypatch.setenv("NO_CACHE", "1")
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+    monkeypatch.setenv("GEMMA_THINKING", "default")
+
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = SimpleNamespace(text='{"ok": true}')
+    monkeypatch.setattr(gemma, "get_client", lambda *args, **kwargs: mock_client)
+
+    result = ask_json("config_test", "Prompt")
+    assert result == {"ok": True}
+
+    call_args = mock_client.models.generate_content.call_args
+    assert call_args is not None
+    config = call_args.kwargs.get("config")
+    assert config.thinking_config is None
+    assert config.max_output_tokens == 3500
+
+
+def test_thinking_config_rejected_fallback(monkeypatch):
+    """Verify that if thinking_config is rejected by SDK/model, it falls back without it."""
+    monkeypatch.setenv("MOCK", "0")
+    monkeypatch.setenv("NO_CACHE", "1")
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+    monkeypatch.setenv("GEMMA_THINKING", "minimal")
+
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = [
+        RuntimeError("Thinking config not supported"),
+        SimpleNamespace(text='{"fallback_ok": true}'),
+    ]
+    monkeypatch.setattr(gemma, "get_client", lambda *args, **kwargs: mock_client)
+
+    result = ask_json("fallback_test", "Prompt")
+    assert result == {"fallback_ok": True}
+    assert mock_client.models.generate_content.call_count == 2
+    second_call = mock_client.models.generate_content.call_args_list[1]
+    assert second_call.kwargs["config"].thinking_config is None
+
+
+
+
 # ---------------------------------------------------------------------------
 # 5. Live test: real reply with small PNG
 # ---------------------------------------------------------------------------

@@ -26,6 +26,17 @@ def web_server():
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
+    # Ensure out/annotated.png exists so /files/annotated.png returns 200 in demo mode
+    from PIL import Image
+
+    from sightline.config import settings
+    out_dir = Path(__file__).resolve().parent.parent / settings.out_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    annotated_file = out_dir / "annotated.png"
+    if not annotated_file.exists():
+        img = Image.new("RGB", (1, 1), color="white")
+        img.save(annotated_file)
+
     # Wait for server ready
     time.sleep(0.5)
     base_url = f"http://127.0.0.1:{port}"

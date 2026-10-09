@@ -104,6 +104,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Issues Saved:  {issues_dir} ({len(result.findings)} markdown files)")
     if result.notes:
         print(f"Notes:         {'; '.join(result.notes)}")
+
+    if "timings" in result.stats and result.stats["timings"]:
+        print("\nStage Timings:")
+        for stage, sec in result.stats["timings"].items():
+            if stage != "total":
+                print(f"  - {stage:<22} : {sec:>6.2f}s")
+        if "total" in result.stats["timings"]:
+            print(f"  - {'Total Pipeline':<22} : {result.stats['timings']['total']:>6.2f}s")
+
     print("-" * 60)
 
     for idx, f in enumerate(result.findings, start=1):

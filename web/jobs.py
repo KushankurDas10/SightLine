@@ -32,8 +32,24 @@ def _execute_job(job_id: str, mode: str, url: str, with_site: bool) -> None:
             if job_id in JOBS:
                 JOBS[job_id]["step"] = step_name
 
+    def on_partial(partial_data: dict[str, Any]) -> None:
+        with _lock:
+            if job_id in JOBS:
+                JOBS[job_id]["partial"] = partial_data
+
     try:
-        result = run(mode=mode, url=url, with_site=with_site, on_step=on_step)
+        try:
+            result = run(
+                mode=mode,
+                url=url,
+                with_site=with_site,
+                on_step=on_step,
+                on_partial=on_partial,
+            )
+        except TypeError:
+            # Fallback for monkeypatched run signatures without on_partial
+            result = run(mode=mode, url=url, with_site=with_site, on_step=on_step)
+
         with _lock:
             if job_id in JOBS:
                 JOBS[job_id]["status"] = "done"
@@ -58,6 +74,7 @@ def create_job(mode: str, url: str, with_site: bool = False) -> str:
             "id": job_id,
             "status": "running",
             "step": "Queued",
+            "partial": None,
             "result": None,
             "error": None,
         }
@@ -77,6 +94,8 @@ def get_job(job_id: str) -> dict[str, Any] | None:
             "status": job["status"],
             "step": job["step"],
         }
+        if job.get("partial") is not None and job["status"] == "running":
+            data["partial"] = job["partial"]
         if job["result"] is not None:
             data["result"] = job["result"]
         if job["error"] is not None:

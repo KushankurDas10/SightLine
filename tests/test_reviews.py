@@ -437,3 +437,156 @@ def test_live_review_repo(monkeypatch):
     for f in findings:
         if f.source == "ai":
             assert normalize_text(f.evidence) in corpus
+
+
+# ---------------------------------------------------------------------------
+# 8. Speed optimizations tests (Phase 7B)
+# ---------------------------------------------------------------------------
+
+
+def test_review_site_element_filtering(monkeypatch, tmp_path):
+    """Verify non-interactive text elements not in measured findings are omitted from prompt."""
+    interactive_el = Element(
+        number=1,
+        selector="button#action",
+        tag="button",
+        text="Click",
+        box=Box(x=0, y=0, w=100, h=40),
+        name="Click",
+        meta={"kind": "interactive"},
+    )
+    unrelated_text_el = Element(
+        number=2,
+        selector="p#para",
+        tag="p",
+        text="Long text paragraph",
+        box=Box(x=0, y=50, w=400, h=20),
+        name="",
+        meta={"kind": "text"},
+    )
+    measured_text_el = Element(
+        number=3,
+        selector="span#error",
+        tag="span",
+        text="Low contrast text",
+        box=Box(x=0, y=80, w=200, h=20),
+        name="",
+        meta={"kind": "text"},
+    )
+
+    img_path = tmp_path / "blank.png"
+    img_path.write_bytes(b"")
+
+    snapshot = PageSnapshot(
+        url="https://test.example",
+        screenshot_path=str(img_path),
+        page_width=1280,
+        page_height=800,
+        elements=[interactive_el, unrelated_text_el, measured_text_el],
+    )
+
+    measured = [
+        Finding(
+            id="site-001",
+            source="measured",
+            target="site",
+            rule="low-contrast",
+            severity="medium",
+            problem="Low contrast text",
+            why_it_matters="Hard to read",
+            fix="Increase contrast",
+            element_number=3,
+        )
+    ]
+
+    captured_prompt = None
+
+    def fake_ask_json(kind, prompt, **kwargs):
+        nonlocal captured_prompt
+        captured_prompt = prompt
+        return {"enrich": [], "new_findings": []}
+
+    monkeypatch.setattr("sightline.gemma_review.ask_json", fake_ask_json)
+    review_site(snapshot, img_path, measured)
+
+    assert captured_prompt is not None
+    assert "Element #1" in captured_prompt  # interactive -> included
+    assert "Element #3" in captured_prompt  # in measured -> included
+    assert "Element #2" not in captured_prompt  # text & not in measured -> omitted
+
+
+def test_review_site_image_downscaling(monkeypatch, tmp_path):
+    """Verify image wider than 1280px is downscaled and passed as JPEG."""
+    from PIL import Image
+
+    wide_img_path = tmp_path / "wide.png"
+    large_im = Image.new("RGB", (2560, 1600), color="blue")
+    large_im.save(wide_img_path, format="PNG")
+
+    snapshot = PageSnapshot(
+        url="https://test.example",
+        screenshot_path=str(wide_img_path),
+        page_width=2560,
+        page_height=1600,
+        elements=[],
+    )
+
+    captured_kwargs = {}
+
+    def fake_ask_json(kind, prompt, **kwargs):
+        captured_kwargs.update(kwargs)
+        return {"enrich": [], "new_findings": []}
+
+    monkeypatch.setattr("sightline.gemma_review.ask_json", fake_ask_json)
+    review_site(snapshot, wide_img_path, measured=[])
+
+    assert captured_kwargs.get("image_mime") == "image/jpeg"
+    img_bytes = captured_kwargs.get("image_bytes")
+    assert img_bytes is not None
+
+    import io
+    processed_im = Image.open(io.BytesIO(img_bytes))
+    assert processed_im.width == 1280
+    assert processed_im.height == 800
+
+
+def test_review_repo_truncation_limits(monkeypatch):
+    """Verify README, key files, and file tree are truncated according to limits."""
+    huge_readme = "A" * 15000
+    huge_config = "B" * 10000
+    files_list = [f"file_{i}.py" for i in range(250)]
+
+    repo = RepoSnapshot(
+        url="https://github.com/test/repo",
+        owner="test",
+        name="repo",
+        description="test repo",
+        homepage=None,
+        default_branch="main",
+        files=files_list,
+        truncated=False,
+        readme=huge_readme,
+        key_files={"config.json": huge_config},
+    )
+
+    captured_prompt = None
+
+    def fake_ask_json(kind, prompt, **kwargs):
+        nonlocal captured_prompt
+        captured_prompt = prompt
+        return {"summary": "test", "enrich": [], "new_findings": []}
+
+    monkeypatch.setattr("sightline.gemma_review.ask_json", fake_ask_json)
+    review_repo(repo, measured=[])
+
+    assert captured_prompt is not None
+    # README truncated to 8000
+    assert "A" * 8000 in captured_prompt
+    assert "A" * 8001 not in captured_prompt
+    # Key files truncated to 4000
+    assert "B" * 4000 in captured_prompt
+    assert "B" * 4001 not in captured_prompt
+    # Only first 150 file paths
+    assert "file_149.py" in captured_prompt
+    assert "file_150.py" not in captured_prompt
+

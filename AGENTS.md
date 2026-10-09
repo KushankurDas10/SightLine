@@ -2,7 +2,7 @@
 
 This repository is maintained with strict AI agent architecture principles and HARD RULES:
 
-1. **Only Gemma**: Use Gemma models exclusively via `google-genai` and `GEMMA_MODEL` (default: `gemma-4-26b-a4b-it`). Never use `gemini-*`, OpenAI, or Anthropic models.
+1. **Only Gemma**: Use Gemma models exclusively via `google-genai` and `GEMMA_MODEL` (default: `gemma-4-26b-a4b-it`). Configure reasoning via `GEMMA_THINKING` (default: `minimal`; allowed: `minimal`, `default`). Never use `gemini-*`, OpenAI, or Anthropic models.
 2. **Never Put Keys in Code**: Read `GEMINI_API_KEY` and `GITHUB_TOKEN` from the environment (`.env` via `python-dotenv`). `.env` is gitignored.
 3. **Never Execute Model Code**: Model outputs are structured text or JSON only. All outputs are strictly validated before use.
 4. **Evidence Requirement**: Every Finding has source `"measured"` (our code is sure) or `"ai"` (Gemma). Every AI finding needs evidence. Drop AI findings whose evidence cannot be verified:
