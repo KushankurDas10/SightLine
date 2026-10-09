@@ -181,3 +181,37 @@ def test_static_routes_and_file_serving():
     finally:
         if test_file.exists():
             test_file.unlink()
+
+
+def test_job_partial_results():
+    """Verify that get_job surfaces partial findings while job status is running."""
+    with jobs._lock:
+        jobs.JOBS["test-partial-job"] = {
+            "id": "test-partial-job",
+            "status": "running",
+            "step": "Asking Gemma",
+            "partial": {
+                "partial": True,
+                "findings": [{"id": "site-001", "rule": "low-contrast"}],
+            },
+            "result": None,
+            "error": None,
+        }
+
+    job_data = jobs.get_job("test-partial-job")
+    assert job_data is not None
+    assert job_data["status"] == "running"
+    assert "partial" in job_data
+    assert job_data["partial"]["partial"] is True
+    assert len(job_data["partial"]["findings"]) == 1
+
+    # When job finishes, partial is not returned in get_job (full result takes over)
+    with jobs._lock:
+        jobs.JOBS["test-partial-job"]["status"] = "done"
+        jobs.JOBS["test-partial-job"]["result"] = {"mode": "site", "findings": []}
+
+    job_data_done = jobs.get_job("test-partial-job")
+    assert job_data_done["status"] == "done"
+    assert "partial" not in job_data_done
+    assert "result" in job_data_done
+

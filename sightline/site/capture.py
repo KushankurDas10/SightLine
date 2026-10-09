@@ -8,6 +8,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 from PIL import Image
@@ -264,7 +265,11 @@ DOM_EXTRACTION_SCRIPT = """
 """
 
 
-def capture(url: str, out_dir: str | Path | None = None) -> PageSnapshot:
+def capture(
+    url: str,
+    out_dir: str | Path | None = None,
+    on_screenshot: Any = None,
+) -> PageSnapshot:
     """Capture a webpage snapshot including full-page screenshot and numbered elements."""
     validated_url = validate_url(url)
 
@@ -283,6 +288,12 @@ def capture(url: str, out_dir: str | Path | None = None) -> PageSnapshot:
 
         page.goto(validated_url, timeout=30000, wait_until="load")
         page.wait_for_timeout(1000)
+
+        if on_screenshot is not None:
+            try:
+                on_screenshot()
+            except Exception:
+                pass
 
         # Full-page screenshot capped at 6000px height
         temp_screenshot = str(screenshot_file)

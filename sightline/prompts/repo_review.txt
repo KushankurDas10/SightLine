@@ -18,6 +18,8 @@ Your tasks:
 CRITICAL RULES:
 - Use only the provided information.
 - Quote exactly and use short plain language.
+- Keep `problem` and `why_it_matters` to at most 1 concise sentence each.
+- Provide at most 5 new findings in `new_findings`.
 - Return ONLY a valid JSON object matching the schema below. No conversational text.
 
 JSON Schema:

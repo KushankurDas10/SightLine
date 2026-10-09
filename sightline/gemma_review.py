@@ -1,9 +1,12 @@
 """Review generation and strict evidence verification using Gemma."""
 
 import copy
+import io
 import logging
 from pathlib import Path
 from typing import Any, Union
+
+from PIL import Image
 
 from sightline.config import REPO_ROOT, settings
 from sightline.gemma import ask_json
@@ -69,6 +72,7 @@ def review_site(
     snapshot: PageSnapshot,
     marked_image_path: Union[str, Path],
     measured: list[Finding],
+    timeout_seconds: float = 45.0,
 ) -> list[Finding]:
     """Generate visual design review using Gemma on annotated snapshot image and DOM.
 
@@ -85,12 +89,15 @@ def review_site(
     if snapshot.lang:
         lines.append(f"Language: {snapshot.lang}")
 
+    measured_el_numbers = {f.element_number for f in measured if f.element_number is not None}
     lines.append("\nCaptured Elements:")
     for el in snapshot.elements:
-        lines.append(
-            f"- Element #{el.number}: <{el.tag}> box=({el.box.x},{el.box.y},{el.box.w},{el.box.h}) "
-            f"name={el.name!r} text={el.text[:60]!r} meta={el.meta}"
-        )
+        if el.meta.get("kind") == "interactive" or el.number in measured_el_numbers:
+            bx, by, bw, bh = el.box.x, el.box.y, el.box.w, el.box.h
+            lines.append(
+                f"- Element #{el.number}: <{el.tag}> box=({bx},{by},{bw},{bh}) "
+                f"name={el.name!r} text={el.text[:60]!r} meta={el.meta}"
+            )
 
     lines.append("\nMeasured Findings to Enrich:")
     for f in measured:
@@ -101,16 +108,38 @@ def review_site(
 
     user_prompt = "\n".join(lines)
 
-    # Read marked screenshot image bytes
+    # Read and downscale marked screenshot image bytes (max 1280px wide)
     image_bytes = None
+    image_mime = "image/png"
     marked_path = Path(marked_image_path)
     if marked_path.exists():
         try:
-            image_bytes = marked_path.read_bytes()
+            with Image.open(marked_path) as im:
+                if im.width > 1280:
+                    new_width = 1280
+                    new_height = int(im.height * (1280 / im.width))
+                    im = im.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                buf = io.BytesIO()
+                if im.mode in ("RGBA", "P"):
+                    im = im.convert("RGB")
+                im.save(buf, format="JPEG", quality=85)
+                image_bytes = buf.getvalue()
+                image_mime = "image/jpeg"
         except Exception as exc:
-            logger.error("Failed to read marked image %s: %s", marked_path, exc)
+            logger.error("Failed to process marked image %s: %s", marked_path, exc)
+            try:
+                image_bytes = marked_path.read_bytes()
+                image_mime = "image/png"
+            except Exception:
+                pass
 
-    data = ask_json("site_review", user_prompt, image_bytes=image_bytes)
+    data = ask_json(
+        "site_review",
+        user_prompt,
+        image_bytes=image_bytes,
+        image_mime=image_mime,
+        timeout_seconds=timeout_seconds,
+    )
     if not isinstance(data, dict):
         logger.warning("Gemma site review returned no valid JSON; returning measured findings.")
         return list(measured)
@@ -185,6 +214,7 @@ def review_site(
 def review_repo(
     repo_snapshot: RepoSnapshot,
     measured: list[Finding],
+    timeout_seconds: float = 45.0,
 ) -> list[Finding]:
     """Generate repository review using Gemma on file tree, README, and key files.
 
@@ -197,15 +227,15 @@ def review_repo(
     lines.append(f"Owner/Name: {repo_snapshot.owner}/{repo_snapshot.name}")
     if repo_snapshot.description:
         lines.append(f"Description: {repo_snapshot.description}")
-    file_list = "\n".join(f"- {f}" for f in repo_snapshot.files[:60])
+    file_list = "\n".join(f"- {f}" for f in repo_snapshot.files[:150])
     lines.append(f"Files ({len(repo_snapshot.files)} total):\n{file_list}")
 
     if repo_snapshot.readme:
-        lines.append(f"\n--- README.md ---\n{repo_snapshot.readme}")
+        lines.append(f"\n--- README.md ---\n{repo_snapshot.readme[:8000]}")
 
     for path, content in repo_snapshot.key_files.items():
         if path != "README.md":
-            lines.append(f"\n--- {path} ---\n{content[:2000]}")
+            lines.append(f"\n--- {path} ---\n{content[:4000]}")
 
     lines.append("\nMeasured Findings to Enrich:")
     for f in measured:
@@ -216,7 +246,7 @@ def review_repo(
 
     user_prompt = "\n".join(lines)
 
-    data = ask_json("repo_review", user_prompt, image_bytes=None)
+    data = ask_json("repo_review", user_prompt, image_bytes=None, timeout_seconds=timeout_seconds)
     if not isinstance(data, dict):
         logger.warning("Gemma repo review returned no valid JSON; returning measured findings.")
         return list(measured)

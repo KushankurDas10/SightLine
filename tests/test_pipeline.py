@@ -39,6 +39,8 @@ def test_pipeline_site_mode(fixtures_server, tmp_path):
     assert len(result.findings) >= 3
     assert result.stats["total_findings"] == len(result.findings)
     assert len(result.issues) == len(result.findings)
+    assert "timings" in result.stats
+    assert "total" in result.stats["timings"]
     for f in result.findings:
         assert f.id in result.issues
         assert len(result.issues[f.id]) > 0
@@ -84,6 +86,8 @@ def test_pipeline_repo_mode(monkeypatch, tmp_path):
     assert len(result.findings) > 0
     assert result.stats["total_findings"] == len(result.findings)
     assert len(result.issues) == len(result.findings)
+    assert "timings" in result.stats
+    assert "total" in result.stats["timings"]
 
 
 def test_pipeline_gemma_none_fallback(monkeypatch, tmp_path):
@@ -142,3 +146,81 @@ def test_cli_execution(monkeypatch, tmp_path):
     assert issues_dir.is_dir()
     issue_files = list(issues_dir.glob("*.md"))
     assert len(issue_files) > 0
+
+
+def test_pipeline_on_partial_callback(monkeypatch, tmp_path):
+    mock_repo = RepoSnapshot(
+        url="https://github.com/mock-org/mock-repo",
+        owner="mock-org",
+        name="mock-repo",
+        description="A mock repository for testing",
+        homepage=None,
+        default_branch="main",
+        files=["README.md"],
+        truncated=False,
+        readme="# Mock Repo\n",
+        key_files={"README.md": "# Mock Repo\n"},
+    )
+    monkeypatch.setattr(github, "fetch", lambda *args, **kwargs: mock_repo)
+    monkeypatch.setattr("sightline.gemma_review.ask_json", lambda *a, **kw: None)
+
+    partial_calls = []
+    run(
+        mode="repo",
+        url="https://github.com/mock-org/mock-repo",
+        out_dir=tmp_path,
+        on_partial=partial_calls.append,
+    )
+
+    assert len(partial_calls) == 1
+    assert partial_calls[0]["partial"] is True
+    assert "findings" in partial_calls[0]
+    assert len(partial_calls[0]["findings"]) > 0
+
+
+def test_pipeline_time_limit_skips_gemma(monkeypatch, tmp_path):
+    mock_repo = RepoSnapshot(
+        url="https://github.com/mock-org/mock-repo",
+        owner="mock-org",
+        name="mock-repo",
+        description="A mock repository for testing",
+        homepage=None,
+        default_branch="main",
+        files=["README.md"],
+        truncated=False,
+        readme="# Mock Repo\n",
+        key_files={"README.md": "# Mock Repo\n"},
+    )
+    monkeypatch.setattr(github, "fetch", lambda *args, **kwargs: mock_repo)
+
+    gemma_called = False
+
+    def fake_review_repo(*a, **kw):
+        nonlocal gemma_called
+        gemma_called = True
+        return []
+
+    monkeypatch.setattr("sightline.pipeline.review_repo", fake_review_repo)
+
+    clock = {"now": 0.0}
+
+    def fake_perf_counter():
+        return clock["now"]
+
+    monkeypatch.setattr("sightline.pipeline.time.perf_counter", fake_perf_counter)
+
+    def slow_run_all(snapshot):
+        clock["now"] += 95.0
+        return []
+
+    monkeypatch.setattr("sightline.pipeline.repo_checks.run_all", slow_run_all)
+
+    result = run(
+        mode="repo",
+        url="https://github.com/mock-org/mock-repo",
+        out_dir=tmp_path,
+    )
+
+    assert not gemma_called
+    assert any("reached 90s time limit" in note for note in result.notes)
+
