@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sightline"
+version = "0.1.0"
+description = "Fast, measured, and AI-assisted accessibility and repository inspector"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "SightLine Contributors" }
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "playwright",
+    "pillow",
+    "google-genai",
+    "httpx",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[project.scripts]
+sightline = "sightline.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "browser: marks tests requiring a browser environment",
+    "live: marks tests requiring external live API access",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = []

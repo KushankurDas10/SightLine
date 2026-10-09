@@ -1,0 +1,20 @@
+{
+  "notes": [
+    "Overall layout is functional but call-to-action buttons have weak contrast.",
+    "Form input controls have minimal visual separation from background."
+  ],
+  "findings": [
+    {
+      "element_number": 2,
+      "rule": "visual-hierarchy",
+      "severity": "medium",
+      "problem": "Submit button lacks strong visual emphasis compared to secondary links",
+      "why_it_matters": "Users might miss the primary interaction target on the page.",
+      "fix": "Apply high-contrast primary styling and padding to element #2.",
+      "fix_snippet": "button.submit { background: #2563eb; color: #ffffff; padding: 10px 20px; }",
+      "fix_value": "#2563eb",
+      "evidence": "Element #2 has transparent background and thin border identical to secondary elements",
+      "confidence": 0.95
+    }
+  ]
+}
