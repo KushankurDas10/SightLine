@@ -1,0 +1,27 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Environment files and tokens
+.env
+.env.local
+*.key
+
+# Screenshots and captured test artifacts
+screenshots/
+annotated/
+temp/
+scratch/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
