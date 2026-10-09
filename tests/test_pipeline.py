@@ -27,6 +27,7 @@ def test_pipeline_site_mode(fixtures_server, tmp_path):
         "Running checks",
         "Marking elements",
         "Asking Gemma",
+        "Verifying fixes",
         "Drawing results",
         "Writing issues",
     ]
