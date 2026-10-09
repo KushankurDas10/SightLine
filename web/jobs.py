@@ -1,1 +1,90 @@
 """Background job runner and progress tracker for web requests."""
+
+import logging
+import threading
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+
+from sightline.pipeline import run
+
+logger = logging.getLogger(__name__)
+
+# Single background worker thread so sync Playwright runs outside asyncio
+_executor = ThreadPoolExecutor(max_workers=1)
+_lock = threading.Lock()
+
+# In-memory store: job_id -> job dict
+JOBS: dict[str, dict[str, Any]] = {}
+MAX_CONCURRENT_JOBS = 5
+
+
+def count_active_jobs() -> int:
+    """Return the number of currently queued or running jobs."""
+    with _lock:
+        return sum(1 for j in JOBS.values() if j.get("status") == "running")
+
+
+def _execute_job(job_id: str, mode: str, url: str, with_site: bool) -> None:
+    """Execute pipeline in worker thread and update job status."""
+    def on_step(step_name: str) -> None:
+        with _lock:
+            if job_id in JOBS:
+                JOBS[job_id]["step"] = step_name
+
+    try:
+        result = run(mode=mode, url=url, with_site=with_site, on_step=on_step)
+        with _lock:
+            if job_id in JOBS:
+                JOBS[job_id]["status"] = "done"
+                JOBS[job_id]["step"] = "Completed"
+                JOBS[job_id]["result"] = (
+                    result.to_dict() if hasattr(result, "to_dict") else result
+                )
+    except Exception as exc:
+        logger.exception("Pipeline job %s failed: %s", job_id, exc)
+        with _lock:
+            if job_id in JOBS:
+                JOBS[job_id]["status"] = "error"
+                JOBS[job_id]["step"] = "Failed"
+                JOBS[job_id]["error"] = str(exc)
+
+
+def create_job(mode: str, url: str, with_site: bool = False) -> str:
+    """Register a new analysis job and submit to background worker thread."""
+    job_id = uuid.uuid4().hex[:12]
+    with _lock:
+        JOBS[job_id] = {
+            "id": job_id,
+            "status": "running",
+            "step": "Queued",
+            "result": None,
+            "error": None,
+        }
+
+    _executor.submit(_execute_job, job_id, mode, url, with_site)
+    return job_id
+
+
+def get_job(job_id: str) -> dict[str, Any] | None:
+    """Retrieve job details for API response, or None if not found."""
+    with _lock:
+        job = JOBS.get(job_id)
+        if not job:
+            return None
+
+        data: dict[str, Any] = {
+            "status": job["status"],
+            "step": job["step"],
+        }
+        if job["result"] is not None:
+            data["result"] = job["result"]
+        if job["error"] is not None:
+            data["error"] = job["error"]
+        return data
+
+
+def clear_jobs() -> None:
+    """Clear in-memory jobs store (primarily for test isolation)."""
+    with _lock:
+        JOBS.clear()
