@@ -1,18 +1,28 @@
-# Python bytecode and caches
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.pytest_cache/
-.ruff_cache/
-build/
-dist/
-*.egg-info/
-
-# Environment files and tokens
+# Environment and secrets
 .env
 .env.local
 *.key
+
+# Output directory
+out/
+
+# Caches
+.cache/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
 
 # Screenshots and captured test artifacts
 screenshots/

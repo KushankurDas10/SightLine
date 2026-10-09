@@ -8,6 +8,8 @@ from sightline.config import Settings
 def test_default_config():
     cfg = Settings()
     assert cfg.gemma_model == "gemma-4-26b-a4b-it"
+    assert str(cfg.out_dir) == "out"
+    assert cfg.allow_private_urls is False
     assert cfg.prompts_dir.exists()
     assert cfg.mock_data_dir.exists()
     assert (cfg.prompts_dir / "site_review.txt").exists()

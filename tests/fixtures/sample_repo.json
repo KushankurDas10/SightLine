@@ -1,0 +1,17 @@
+{
+  "owner": "example-org",
+  "name": "sample-project",
+  "description": "A sample repository for testing SightLine repo checks",
+  "homepage": null,
+  "default_branch": "main",
+  "files": [
+    "README.md",
+    "pyproject.toml"
+  ],
+  "truncated": false,
+  "readme": "# Sample Project\n\nRun the test suite:\n```bash\npytest\n```",
+  "key_files": {
+    "README.md": "# Sample Project\n\nRun the test suite:\n```bash\npytest\n```",
+    "pyproject.toml": "[project]\nname = \"sample-project\"\nversion = \"0.1.0\"\n"
+  }
+}

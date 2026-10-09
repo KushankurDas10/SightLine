@@ -1,0 +1,42 @@
+{
+  "mode": "site",
+  "url": "https://example.com",
+  "title": "Example Domain",
+  "findings": [
+    {
+      "id": "site-meas-contrast-1",
+      "source": "measured",
+      "target": "site",
+      "rule": "color-contrast",
+      "severity": "medium",
+      "problem": "Low contrast text detected on link element",
+      "why_it_matters": "Text with poor contrast is difficult for visually impaired users to read.",
+      "fix": "Increase contrast ratio to at least 4.5:1.",
+      "fix_snippet": "color: #1e3a8a;",
+      "fix_value": "#1e3a8a",
+      "evidence": "Contrast ratio is 2.8:1 (foreground #60a5fa on background #ffffff)",
+      "confidence": 1.0,
+      "element_number": 1,
+      "box": {
+        "x": 100.0,
+        "y": 150.0,
+        "w": 120.0,
+        "h": 32.0
+      },
+      "file_path": null,
+      "verified": false,
+      "verified_note": null
+    }
+  ],
+  "annotated_image": null,
+  "issues": {
+    "site-meas-contrast-1": "## Low contrast text on link\n\n### Problem\nLow contrast text detected on link element.\n\n### Suggested Fix\n```css\ncolor: #1e3a8a;\n```"
+  },
+  "notes": ["Sample site analysis completed"],
+  "stats": {
+    "total_findings": 1,
+    "high_severity": 0,
+    "medium_severity": 1,
+    "low_severity": 0
+  }
+}

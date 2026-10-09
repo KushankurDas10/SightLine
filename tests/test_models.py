@@ -82,6 +82,13 @@ def test_finding_and_analysis_result():
         issues={"finding-1": "# Issue title\nProblem details"},
         stats={"total_findings": 1},
     )
+    finding_dict = asdict(finding)
+    assert finding_dict["id"] == "finding-1"
+    assert finding_dict["source"] == "measured"
+
+    result_dict = asdict(result)
+    assert result_dict["mode"] == "site"
+
     serialized = result.to_dict()
     assert serialized["mode"] == "site"
     assert len(serialized["findings"]) == 1
