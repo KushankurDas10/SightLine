@@ -34,6 +34,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const resultBadgeMode = document.getElementById("result-badge-mode");
   const resultsUrlLink = document.getElementById("results-url-link");
+  const repoCard = document.getElementById("repo-card");
+  const repoCardLink = document.getElementById("repo-card-link");
+  const repoCardDesc = document.getElementById("repo-card-desc");
+  const repoFactsPills = document.getElementById("repo-facts-pills");
   const repoSummaryCard = document.getElementById("repo-summary-card");
   const repoSummaryText = document.getElementById("repo-summary-text");
 
@@ -53,6 +57,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const findingsList = document.getElementById("findings-list");
   const toast = document.getElementById("toast");
   const toastMessage = document.getElementById("toast-message");
+
+  const compareModal = document.getElementById("compare-modal");
+  const compareModalClose = document.getElementById("compare-modal-close");
+  const compareModalImg = document.getElementById("compare-modal-img");
+  const compareModalNote = document.getElementById("compare-modal-note");
+  const compareModalTitle = document.getElementById("compare-modal-title");
+
+  if (compareModal && compareModalClose) {
+    compareModalClose.addEventListener("click", () => compareModal.close());
+    compareModal.addEventListener("click", (e) => {
+      const rect = compareModal.getBoundingClientRect();
+      const isInDialog = (
+        rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX && e.clientX <= rect.left + rect.width
+      );
+      if (!isInDialog) compareModal.close();
+    });
+  }
 
   let currentResult = null;
   let activeFilter = "all";
@@ -100,6 +122,41 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  function formatCount(n) {
+    if (n === null || n === undefined || isNaN(n) || n <= 0) return "0";
+    const val = Number(n);
+    if (val >= 1000000) {
+      const m = (val / 1000000).toFixed(1);
+      return (m.endsWith(".0") ? m.slice(0, -2) : m) + "M";
+    }
+    if (val >= 1000) {
+      const k = (val / 1000).toFixed(1);
+      return (k.endsWith(".0") ? k.slice(0, -2) : k) + "k";
+    }
+    return String(val);
+  }
+
+  function formatRelativeTime(isoString) {
+    if (!isoString) return "recently";
+    try {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+      if (isNaN(diffSec) || diffSec < 0) return "recently";
+      if (diffSec < 3600) return "recently";
+      const hours = Math.floor(diffSec / 3600);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      if (days < 30) return `${days}d ago`;
+      const months = Math.floor(days / 30);
+      if (months < 12) return `${months}mo ago`;
+      const years = Math.floor(days / 365);
+      return `${years}y ago`;
+    } catch (_) {
+      return "recently";
+    }
   }
 
   function showToast(message) {
@@ -459,6 +516,47 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
       }
 
+      // Comparison HTML under the fix
+      let compareHtml = "";
+      const hasCompare = !!(finding.verified && finding.compare_image);
+      if (hasCompare) {
+        const jobId = (currentResult && (currentResult.job_id || currentResult.id)) || "site";
+        const compSrc = finding.compare_image.includes("?")
+          ? `${finding.compare_image}&v=${encodeURIComponent(jobId)}`
+          : `${finding.compare_image}?v=${encodeURIComponent(jobId)}`;
+        const ruleName = escapeHtml(finding.rule || "accessibility");
+        const altText = `Before and after: ${ruleName} fix`;
+        const noteText = finding.compare_note ? escapeHtml(finding.compare_note) : "";
+
+        compareHtml = `
+          <div class="finding-section compare-section">
+            <span class="section-label">Before &amp; After Fix</span>
+            <figure class="compare-figure">
+              <button type="button" class="compare-img-btn" aria-label="Enlarge before and after comparison for ${ruleName}">
+                <img 
+                  src="${compSrc}" 
+                  alt="${altText}" 
+                  loading="lazy" 
+                  class="compare-preview-img"
+                >
+                <span class="compare-expand-pill" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <polyline points="9 21 3 21 3 15"></polyline>
+                    <line x1="21" y1="3" x2="14" y2="10"></line>
+                    <line x1="3" y1="21" x2="10" y2="14"></line>
+                  </svg>
+                  Click to enlarge
+                </span>
+              </button>
+              <figcaption class="compare-caption">
+                ${noteText ? `<span class="compare-note-badge">${noteText}</span>` : ""}
+              </figcaption>
+            </figure>
+          </div>
+        `;
+      }
+
       card.innerHTML = `
         <div class="card-top">
           <div class="badges-group">${badgesHtml}</div>
@@ -477,12 +575,12 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="evidence-box">${escapeHtml(finding.evidence || "Observed during inspection.")}</div>
         </div>
 
-        <button type="button" class="finding-details-toggle" aria-expanded="false" id="toggle-details-${index}">
+        <button type="button" class="finding-details-toggle" aria-expanded="${hasCompare ? "true" : "false"}" id="toggle-details-${index}">
           <span class="details-arrow" aria-hidden="true">▶</span>
-          <span class="details-label">Show fix</span>
+          <span class="details-label">${hasCompare ? "Hide fix" : "Show fix"}</span>
         </button>
 
-        <div class="finding-collapsible hidden" id="collapsible-${index}">
+        <div class="finding-collapsible ${hasCompare ? "" : "hidden"}" id="collapsible-${index}">
           <div class="finding-section">
             <span class="section-label">Suggested Fix</span>
             <div class="fix-box">
@@ -491,6 +589,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ${fixSnippetHtml}
             </div>
           </div>
+          ${compareHtml}
         </div>
 
         <div class="card-footer">
@@ -512,6 +611,31 @@ document.addEventListener("DOMContentLoaded", () => {
           detailsBtn.querySelector(".details-label").textContent = "Hide fix";
         }
       });
+
+      // Comparison preview image handlers
+      const compImg = card.querySelector(".compare-preview-img");
+      if (compImg) {
+        compImg.addEventListener("error", () => {
+          const compSec = card.querySelector(".compare-section");
+          if (compSec) compSec.classList.add("hidden");
+        });
+      }
+
+      const compBtn = card.querySelector(".compare-img-btn");
+      if (compBtn && compImg && compareModal) {
+        compBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          compareModalImg.src = compImg.src;
+          compareModalImg.alt = compImg.alt;
+          if (compareModalNote) {
+            compareModalNote.textContent = finding.compare_note || "";
+          }
+          if (compareModalTitle) {
+            compareModalTitle.textContent = `Before & After: ${finding.rule || "Accessibility"} Fix`;
+          }
+          compareModal.showModal();
+        });
+      }
 
       // Badges "?" help link targets explainer
       card.querySelectorAll(".badge-help-link").forEach((helpBtn) => {
@@ -576,6 +700,116 @@ document.addEventListener("DOMContentLoaded", () => {
     // Mode-specific sections
     if (isRepo) {
       screenshotCard.classList.add("hidden");
+
+      // Populate and show Repo Card if repo_info is present
+      if (result.repo_info && repoCard) {
+        const info = result.repo_info;
+        const ownerName = `${info.owner || ""}/${info.name || ""}`;
+        if (repoCardLink) {
+          repoCardLink.textContent = ownerName;
+          repoCardLink.href = info.html_url || `https://github.com/${ownerName}`;
+        }
+        if (repoCardDesc) {
+          repoCardDesc.textContent = info.description || "No description provided.";
+        }
+
+        if (repoFactsPills) {
+          repoFactsPills.innerHTML = "";
+
+          // Stars pill (star icon, formatted like 1.2k, readable aria-label)
+          const starsVal = Number(info.stars || 0);
+          const starsPill = document.createElement("span");
+          starsPill.className = "repo-fact-pill repo-fact-stars";
+          starsPill.setAttribute("aria-label", `${starsVal.toLocaleString()} stars`);
+          starsPill.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span class="repo-fact-stars-count">${formatCount(starsVal)}</span>
+          `;
+          repoFactsPills.appendChild(starsPill);
+
+          // Forks pill
+          const forksVal = Number(info.forks || 0);
+          const forksPill = document.createElement("span");
+          forksPill.className = "repo-fact-pill repo-fact-forks";
+          forksPill.setAttribute("aria-label", `${forksVal.toLocaleString()} forks`);
+          forksPill.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="6" y1="3" x2="6" y2="15"></line>
+              <circle cx="18" cy="6" r="3"></circle>
+              <circle cx="6" cy="18" r="3"></circle>
+              <path d="M18 9a9 9 0 0 1-9 9"></path>
+            </svg>
+            <span>${formatCount(forksVal)}</span>
+          `;
+          repoFactsPills.appendChild(forksPill);
+
+          // Language pill
+          if (info.language) {
+            const langPill = document.createElement("span");
+            langPill.className = "repo-fact-pill repo-fact-lang";
+            langPill.setAttribute("aria-label", `Primary language: ${info.language}`);
+            langPill.innerHTML = `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+              <span>${escapeHtml(info.language)}</span>
+            `;
+            repoFactsPills.appendChild(langPill);
+          }
+
+          // License pill
+          const licensePill = document.createElement("span");
+          licensePill.className = "repo-fact-pill repo-fact-license";
+          const licName = info.license_name || "No license";
+          licensePill.setAttribute("aria-label", `License: ${licName}`);
+          licensePill.innerHTML = `
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>${escapeHtml(licName)}</span>
+          `;
+          repoFactsPills.appendChild(licensePill);
+
+          // Open issues pill
+          const issuesVal = Number(info.open_issues || 0);
+          const issuesPill = document.createElement("span");
+          issuesPill.className = "repo-fact-pill repo-fact-issues";
+          issuesPill.setAttribute("aria-label", `${issuesVal.toLocaleString()} open issues`);
+          issuesPill.innerHTML = `
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>${formatCount(issuesVal)} issues</span>
+          `;
+          repoFactsPills.appendChild(issuesPill);
+
+          // Updated pill
+          if (info.pushed_at) {
+            const updatedPill = document.createElement("span");
+            updatedPill.className = "repo-fact-pill repo-fact-updated";
+            const relTime = formatRelativeTime(info.pushed_at);
+            updatedPill.setAttribute("aria-label", `Updated ${relTime}`);
+            updatedPill.innerHTML = `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>Updated ${escapeHtml(relTime)}</span>
+            `;
+            repoFactsPills.appendChild(updatedPill);
+          }
+        }
+
+        repoCard.classList.remove("hidden");
+      } else if (repoCard) {
+        repoCard.classList.add("hidden");
+      }
+
       const summaryContent = result.summary || (result.notes && result.notes.length ? result.notes.join("\n\n") : "");
       if (summaryContent) {
         repoSummaryText.textContent = summaryContent;
@@ -584,6 +818,7 @@ document.addEventListener("DOMContentLoaded", () => {
         repoSummaryCard.classList.add("hidden");
       }
     } else {
+      if (repoCard) repoCard.classList.add("hidden");
       repoSummaryCard.classList.add("hidden");
       if (result.annotated_image) {
         // Cache bust if generated in /files/

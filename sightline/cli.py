@@ -7,6 +7,7 @@ from pathlib import Path
 
 from sightline.config import settings
 from sightline.pipeline import run
+from sightline.repo.github import format_count
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -89,7 +90,17 @@ def main(argv: list[str] | None = None) -> int:
 
     # Print human-readable summary
     print("\n" + "=" * 60)
-    print(f"SightLine Analysis: {result.title} [{result.mode.upper()}]")
+    if result.mode == "repo" and result.repo_info:
+        info = result.repo_info
+        stars_str = format_count(info.get("stars", 0))
+        forks_str = format_count(info.get("forks", 0))
+        lang_str = info.get("language") or "Unknown"
+        print(
+            f"SightLine Analysis: {result.title} "
+            f"({stars_str} stars, {forks_str} forks, {lang_str}) [REPO]"
+        )
+    else:
+        print(f"SightLine Analysis: {result.title} [{result.mode.upper()}]")
     print("=" * 60)
     print(f"Target URL:    {result.url}")
     print(f"Total Issues:  {result.stats['total_findings']}")

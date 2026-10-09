@@ -57,10 +57,18 @@ def _execute_job(job_id: str, mode: str, url: str, with_site: bool) -> None:
             result = run(mode=mode, url=url, with_site=with_site, on_step=on_step)
 
         res_dict = result.to_dict() if hasattr(result, "to_dict") else dict(result)
-        if isinstance(res_dict, dict) and res_dict.get("annotated_image"):
-            res_dict["annotated_image"] = f"/files/{job_id}/annotated.png"
+        if isinstance(res_dict, dict):
+            if res_dict.get("annotated_image"):
+                res_dict["annotated_image"] = f"/files/{job_id}/annotated.png"
+            for f_dict in res_dict.get("findings", []):
+                if isinstance(f_dict, dict) and f_dict.get("compare_image"):
+                    f_dict["compare_image"] = f"/files/{job_id}/compare/{f_dict['id']}.png"
         if hasattr(result, "annotated_image") and result.annotated_image:
             result.annotated_image = f"/files/{job_id}/annotated.png"
+        if hasattr(result, "findings") and result.findings:
+            for f in result.findings:
+                if getattr(f, "compare_image", None):
+                    f.compare_image = f"/files/{job_id}/compare/{f.id}.png"
 
         with _lock:
             if job_id in JOBS:

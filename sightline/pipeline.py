@@ -141,7 +141,7 @@ def run(
 
         _step("Verifying fixes")
         try:
-            findings = verify_fixes(url, snapshot, findings)
+            findings = verify_fixes(url, snapshot, findings, out_dir=out_path)
         except Exception as exc:
             notes.append(f"Fix verification failed: {exc}")
 
@@ -186,6 +186,19 @@ def run(
         _step("Fetching repository")
         repo_snapshot = github.fetch(url)
 
+        repo_info = {
+            "owner": repo_snapshot.owner,
+            "name": repo_snapshot.name,
+            "description": repo_snapshot.description,
+            "stars": repo_snapshot.stars,
+            "forks": repo_snapshot.forks,
+            "language": repo_snapshot.language,
+            "license_name": repo_snapshot.license_name,
+            "open_issues": repo_snapshot.open_issues,
+            "pushed_at": repo_snapshot.pushed_at,
+            "html_url": repo_snapshot.html_url or f"https://github.com/{repo_snapshot.owner}/{repo_snapshot.name}",
+        }
+
         _step("Running checks")
         measured = repo_checks.run_all(repo_snapshot)
 
@@ -198,6 +211,7 @@ def run(
                 "findings": [asdict(f) for f in measured],
                 "stats": _compute_stats(measured, timings=dict(timings)),
                 "notes": list(notes),
+                "repo_info": repo_info,
             }
             try:
                 on_partial(partial_data)
@@ -263,6 +277,7 @@ def run(
             issues=issues,
             notes=notes,
             stats=stats,
+            repo_info=repo_info,
         )
 
         result_file = out_path / "result.json"

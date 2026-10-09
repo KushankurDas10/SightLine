@@ -223,6 +223,23 @@
           </div>
         </div>
 
+        <!-- Repository Details Card (repo mode) -->
+        <section id="repo-card" class="card repo-card hidden" aria-labelledby="repo-card-title">
+          <div class="repo-card-header">
+            <div class="repo-card-title-group">
+              <svg class="repo-card-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              <h3 id="repo-card-title" class="repo-card-title">
+                <a id="repo-card-link" href="#" target="_blank" rel="noopener noreferrer" class="repo-card-link">owner/name</a>
+              </h3>
+            </div>
+            <div id="repo-facts-pills" class="repo-facts-pills" role="list" aria-label="Repository facts"></div>
+          </div>
+          <p id="repo-card-desc" class="repo-card-desc"></p>
+        </section>
+
         <!-- Repository Summary Block (repo mode) -->
         <section id="repo-summary-card" class="card summary-card hidden" aria-labelledby="summary-heading">
           <h3 id="summary-heading" class="summary-heading">Repository Summary</h3>
@@ -310,7 +327,7 @@
                   <span class="badge badge-verified">Verified fix</span>
                 </div>
                 <div class="explainer-desc">
-                  <strong>Verified:</strong> SightLine applied the fix in a headless browser and re-checked. The problem is confirmed resolved.
+                  <strong>Verified:</strong> SightLine applied the fix in a headless browser and re-checked. The problem is confirmed resolved. Verified fixes show a before and after picture taken in a real browser.
                 </div>
               </div>
             </div>
@@ -338,6 +355,20 @@
         </section>
       </div>
     </main>
+
+    <!-- Native Accessible Dialog for Enlarged Comparison View -->
+    <dialog id="compare-modal" class="compare-dialog" aria-labelledby="compare-modal-title">
+      <div class="compare-dialog-content">
+        <div class="compare-dialog-header">
+          <h3 id="compare-modal-title" class="compare-dialog-title">Before &amp; After Fix</h3>
+          <button type="button" id="compare-modal-close" class="btn-close" aria-label="Close enlarged comparison">✕</button>
+        </div>
+        <div class="compare-dialog-body">
+          <img id="compare-modal-img" src="" alt="Enlarged comparison view" class="compare-modal-img">
+          <p id="compare-modal-note" class="compare-modal-note"></p>
+        </div>
+      </div>
+    </dialog>
 
     <!-- Accessible Notification Toast -->
     <div id="toast" class="toast hidden" role="status" aria-live="polite">

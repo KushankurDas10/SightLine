@@ -106,6 +106,12 @@ def get_job(job_id: str) -> dict[str, Any]:
 @app.get("/files/{file_path:path}")
 def serve_file(file_path: str) -> FileResponse:
     """Serve generated analysis artifacts securely, preventing directory traversal."""
+    parts = file_path.replace("\\", "/").split("/")
+    if ".." in parts:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: path traversal detected.",
+        )
     base_dir = OUT_DIR.resolve()
     target_path = (base_dir / file_path).resolve()
     try:

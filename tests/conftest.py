@@ -22,7 +22,7 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 @pytest.fixture(scope="session")
 def fixtures_server():
-    """Serve tests/fixtures on localhost with ALLOW_PRIVATE_URLS=1."""
+    """Serve tests/fixtures on localhost."""
     handler = partial(SimpleHTTPRequestHandler, directory=str(FIXTURES_DIR))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     _, port = server.server_address
@@ -30,16 +30,26 @@ def fixtures_server():
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
 
-    old_allow = os.environ.get("ALLOW_PRIVATE_URLS")
-    os.environ["ALLOW_PRIVATE_URLS"] = "1"
-
     base_url = f"http://127.0.0.1:{port}"
     try:
         yield base_url
     finally:
         server.shutdown()
         server.server_close()
-        if old_allow is not None:
-            os.environ["ALLOW_PRIVATE_URLS"] = old_allow
-        else:
-            os.environ.pop("ALLOW_PRIVATE_URLS", None)
+
+
+@pytest.fixture(autouse=True)
+def _ensure_fixtures_allow_private(request):
+    """Ensure ALLOW_PRIVATE_URLS=1 is set for any test requesting fixtures_server."""
+    if "fixtures_server" in request.fixturenames:
+        old_val = os.environ.get("ALLOW_PRIVATE_URLS")
+        os.environ["ALLOW_PRIVATE_URLS"] = "1"
+        try:
+            yield
+        finally:
+            if old_val is not None:
+                os.environ["ALLOW_PRIVATE_URLS"] = old_val
+            else:
+                os.environ.pop("ALLOW_PRIVATE_URLS", None)
+    else:
+        yield

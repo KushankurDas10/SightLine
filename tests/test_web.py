@@ -279,10 +279,13 @@ def test_jobs_unique_folders(monkeypatch):
 
 
 def test_files_endpoint_traversal():
-    """Verify that path traversal attempts on /files return 404 or 403."""
+    """Verify that path traversal attempts on /files are rejected."""
     res = client.get("/files/../../etc/passwd")
     assert res.status_code in (403, 404)
 
     res_encoded = client.get("/files/..%2F..%2Fetc/passwd")
-    assert res_encoded.status_code in (403, 404)
+    assert res_encoded.status_code == 403
+
+    res_dotdot = client.get("/files/%2e%2e%2fsecret.txt")
+    assert res_dotdot.status_code == 403
 
