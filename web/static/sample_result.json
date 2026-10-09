@@ -1,0 +1,161 @@
+{
+  "mode": "site",
+  "url": "https://example.com",
+  "title": "Example Domain",
+  "findings": [
+    {
+      "id": "site-meas-contrast-1",
+      "source": "measured",
+      "target": "site",
+      "rule": "color-contrast",
+      "severity": "high",
+      "problem": "Insufficient contrast ratio on primary call-to-action link",
+      "why_it_matters": "Low contrast text makes content unreadable for users with low vision or color vision deficiencies.",
+      "fix": "Increase contrast ratio to at least 4.5:1 by darkening text color.",
+      "fix_snippet": "color: #1e3a8a;",
+      "fix_value": "#1e3a8a",
+      "evidence": "Contrast ratio is 2.8:1 (foreground #60a5fa on background #ffffff)",
+      "confidence": 1.0,
+      "element_number": 1,
+      "box": {
+        "x": 100.0,
+        "y": 150.0,
+        "w": 140.0,
+        "h": 36.0
+      },
+      "file_path": null,
+      "verified": false,
+      "verified_note": null
+    },
+    {
+      "id": "site-meas-missing-alt-2",
+      "source": "measured",
+      "target": "site",
+      "rule": "missing-alt",
+      "severity": "medium",
+      "problem": "Hero illustration img tag is missing an alt attribute",
+      "why_it_matters": "Screen readers announce the raw image filename or skip the element entirely without descriptive alt text.",
+      "fix": "Add a descriptive alt attribute describing the image content.",
+      "fix_snippet": "<img src=\"/hero.png\" alt=\"Platform architecture overview\">",
+      "fix_value": "Platform architecture overview",
+      "evidence": "<img src=\"/hero.png\"> element has empty or missing alt attribute",
+      "confidence": 1.0,
+      "element_number": 2,
+      "box": {
+        "x": 280.0,
+        "y": 150.0,
+        "w": 400.0,
+        "h": 240.0
+      },
+      "file_path": null,
+      "verified": true,
+      "verified_note": "Verified img element #2 lacks alt attribute in DOM snapshot"
+    },
+    {
+      "id": "site-ai-touch-target-3",
+      "source": "ai",
+      "target": "site",
+      "rule": "small-touch-target",
+      "severity": "medium",
+      "problem": "Mobile navigation icon touch target is below recommended 44x44px",
+      "why_it_matters": "Small tap targets cause frustration and unintended clicks on touch-enabled mobile devices.",
+      "fix": "Add padding or min-width/min-height of 44px to the button.",
+      "fix_snippet": "min-width: 44px; min-height: 44px; padding: 10px;",
+      "fix_value": "44px",
+      "evidence": "element #3 bounding box measures 28x28px",
+      "confidence": 0.92,
+      "element_number": 3,
+      "box": {
+        "x": 24.0,
+        "y": 16.0,
+        "w": 28.0,
+        "h": 28.0
+      },
+      "file_path": null,
+      "verified": true,
+      "verified_note": "Verified element badge 3 exists on page snapshot"
+    },
+    {
+      "id": "repo-meas-missing-license-4",
+      "source": "measured",
+      "target": "repo",
+      "rule": "missing-license",
+      "severity": "high",
+      "problem": "Repository is missing an open source LICENSE file",
+      "why_it_matters": "Without an open source license, default copyright laws apply, preventing legal use, modification, or distribution.",
+      "fix": "Add an open source license file (such as MIT or Apache-2.0) at the repository root.",
+      "fix_snippet": null,
+      "fix_value": null,
+      "evidence": "No LICENSE, LICENCE, or COPYING file found in repository root",
+      "confidence": 1.0,
+      "element_number": null,
+      "box": null,
+      "file_path": "LICENSE",
+      "verified": false,
+      "verified_note": null
+    },
+    {
+      "id": "repo-meas-command-mismatch-5",
+      "source": "measured",
+      "target": "repo",
+      "rule": "readme-command-mismatch",
+      "severity": "medium",
+      "problem": "README command references requirements file 'requirements-dev.txt' which does not exist in repository",
+      "why_it_matters": "Users following installation instructions will encounter a FileNotFoundError.",
+      "fix": "Create 'requirements-dev.txt' or update the README command with the correct path.",
+      "fix_snippet": null,
+      "fix_value": null,
+      "evidence": "pip install -r requirements-dev.txt",
+      "confidence": 1.0,
+      "element_number": null,
+      "box": null,
+      "file_path": "README.md",
+      "verified": true,
+      "verified_note": "checked against the repo files"
+    },
+    {
+      "id": "repo-ai-unhandled-exception-6",
+      "source": "ai",
+      "target": "repo",
+      "rule": "unhandled-network-exception",
+      "severity": "low",
+      "problem": "HTTP API request in client does not handle network timeout exceptions",
+      "why_it_matters": "Uncaught network timeouts crash CLI execution instead of presenting graceful recovery guidance.",
+      "fix": "Wrap HTTP request in a try-except block catching httpx.TimeoutException.",
+      "fix_snippet": "try:\n    resp = client.get(url)\nexcept httpx.TimeoutException:\n    logger.error('Request timed out')",
+      "fix_value": null,
+      "evidence": "resp = client.get(repo_api_url, headers=headers)",
+      "confidence": 0.88,
+      "element_number": null,
+      "box": null,
+      "file_path": "sightline/repo/github.py",
+      "verified": true,
+      "verified_note": "verbatim quote matched in sightline/repo/github.py"
+    }
+  ],
+  "annotated_image": "/files/annotated.png",
+  "issues": {
+    "site-meas-contrast-1": "## [HIGH] Insufficient contrast ratio on primary CTA link\n\n### Problem\nLow contrast text makes content unreadable for users with low vision.\n\n### Suggested Fix\n```css\ncolor: #1e3a8a;\n```",
+    "site-meas-missing-alt-2": "## [MEDIUM] Hero illustration img tag missing alt attribute\n\n### Problem\nScreen readers cannot announce image content.\n\n### Suggested Fix\nAdd descriptive alt attribute: `alt=\"Platform architecture overview\"`",
+    "site-ai-touch-target-3": "## [MEDIUM] Mobile navigation touch target below 44px\n\n### Problem\nSmall tap targets cause misclicks on mobile touchscreens.\n\n### Suggested Fix\n```css\nmin-width: 44px;\nmin-height: 44px;\n```",
+    "repo-meas-missing-license-4": "## [HIGH] Repository is missing an open source LICENSE file\n\n### Problem\nNo open source license present at repository root.\n\n### Suggested Fix\nAdd MIT or Apache-2.0 LICENSE file.",
+    "repo-meas-command-mismatch-5": "## [MEDIUM] README command references non-existent requirements file\n\n### Problem\n`pip install -r requirements-dev.txt` references missing file.\n\n### Suggested Fix\nAdd file or update README.",
+    "repo-ai-unhandled-exception-6": "## [LOW] Unhandled network timeout exception in API fetcher\n\n### Problem\nNetwork timeouts can terminate execution uncaught.\n\n### Suggested Fix\nWrap client.get in try-except block."
+  },
+  "notes": [
+    "Sample analysis completed with 6 findings across website accessibility and repository structure."
+  ],
+  "stats": {
+    "total_findings": 6,
+    "by_source": {
+      "measured": 4,
+      "ai": 2
+    },
+    "by_severity": {
+      "high": 2,
+      "medium": 3,
+      "low": 1
+    },
+    "verified": 4
+  }
+}
