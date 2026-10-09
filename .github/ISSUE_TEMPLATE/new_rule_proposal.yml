@@ -1,0 +1,58 @@
+name: New Rule Proposal
+description: Propose a new measured accessibility or repository check
+title: "[Rule Proposal]: "
+labels: ["rule-proposal", "analyzer"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        SightLine uses deterministic, measured analyzers to complement AI reviews.
+        Please review `docs/ADDING_AN_ANALYZER.md` before proposing a new rule.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Target Domain
+      description: Is this rule for website accessibility or repository health?
+      options:
+        - Website Accessibility (`sightline/site/checks.py`)
+        - Repository Health (`sightline/repo/checks.py`)
+    validations:
+      required: true
+  - type: input
+    id: rule_id
+    attributes:
+      label: Proposed Rule Identifier
+      description: Lowercase kebab-case identifier (e.g., `missing-html-lang`, `empty-table-header`).
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Default Severity
+      options:
+        - high
+        - medium
+        - low
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why It Matters (Accessibility / Standards Basis)
+      description: Which WCAG success criterion or open-source best practice does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: detection_logic
+    attributes:
+      label: Deterministic Detection Logic
+      description: How should our code measure this without guessing? What facts must be extracted?
+    validations:
+      required: true
+  - type: textarea
+    id: suggested_fix
+    attributes:
+      label: Suggested Fix & Snippet
+      description: What concrete, deterministic remediation should be recommended?
+    validations:
+      required: true

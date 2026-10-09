@@ -1,0 +1,58 @@
+name: Bug Report
+description: File a bug report to help improve SightLine
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! Please provide as much context as possible.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Operating Mode
+      description: Which mode was being used when the bug occurred?
+      options:
+        - Website mode (`sightline site <url>`)
+        - Repository mode (`sightline repo <url>`)
+        - Web UI (`sightline --web`)
+        - Other / Library API
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Run `sightline site https://...`
+        2. Inspect output
+        3. See error ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, Playwright version, model settings.
+      value: |
+        - OS: [e.g. Linux, Windows, macOS]
+        - Python version: [e.g. 3.11, 3.12, 3.14]
+        - Gemma Model: [e.g. gemma-4-26b-a4b-it]
+        - MOCK mode: [yes / no]
+    validations:
+      required: true
