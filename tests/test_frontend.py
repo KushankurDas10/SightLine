@@ -96,7 +96,7 @@ def test_frontend_demo(web_server):
         assert "Copied" in snippet_buttons[0].inner_text()
 
         # 6. Interactive click on finding card draws highlight box on overlay
-        cards[0].click()
+        cards[0].click(position={"x": 40, "y": 20})
         page.wait_for_selector(".screenshot-highlight-box", timeout=2000)
         highlight_box = page.locator(".screenshot-highlight-box")
         assert highlight_box.is_visible()
@@ -296,6 +296,58 @@ def test_frontend_compare_images(web_server):
         assert files_requests == [], f"Demo mode made unexpected /files requests: {files_requests}"
 
         # 5. No console errors
+        assert console_errors == [], f"Detected console errors: {console_errors}"
+
+        browser.close()
+
+
+@pytest.mark.browser
+def test_frontend_alternatives_site_vs_repo(web_server):
+    """Verify ?demo=site shows 'Other ways to fix this' with working copy button,
+    while ?demo=repo shows no alternatives section, and no console errors.
+    """
+    console_errors: list[str] = []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        page.on(
+            "console",
+            lambda msg: console_errors.append(f"Console {msg.type}: {msg.text}")
+            if msg.type == "error"
+            else None,
+        )
+        page.on("pageerror", lambda err: console_errors.append(f"PageError: {err}"))
+
+        # 1. ?demo=site
+        page.goto(f"{web_server}/?demo=site")
+        page.wait_for_selector(".finding-card", timeout=5000)
+
+        # Alternatives section is present on site findings
+        page.wait_for_selector(".alternatives-section", timeout=2000)
+        alt_sections = page.locator(".alternatives-section")
+        assert alt_sections.count() > 0
+
+        # Click summary to open details
+        summary = page.locator(".alternatives-summary").first
+        assert "other ways to fix this" in summary.inner_text().lower()
+        summary.click()
+
+        # Check alternative cards and copy button
+        copy_alt_btn = page.locator(".copy-alt-snippet-btn").first
+        assert copy_alt_btn.is_visible()
+        copy_alt_btn.click()
+        page.wait_for_timeout(200)
+        assert "copied" in copy_alt_btn.inner_text().lower()
+
+        # 2. ?demo=repo shows no alternatives section
+        page.goto(f"{web_server}/?demo=repo")
+        page.wait_for_selector(".finding-card", timeout=5000)
+        repo_alt_sections = page.locator(".alternatives-section")
+        assert repo_alt_sections.count() == 0
+
+        # 3. No console errors
         assert console_errors == [], f"Detected console errors: {console_errors}"
 
         browser.close()

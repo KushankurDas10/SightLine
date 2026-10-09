@@ -5,7 +5,13 @@
       "why_it_matters": "Low contrast makes text illegible for users with visual impairments.",
       "fix": "Increase contrast to meet WCAG AA standard of at least 4.5:1.",
       "fix_snippet": "color: #1e3a8a;",
-      "fix_value": "#1e3a8a"
+      "fix_value": "#1e3a8a",
+      "alternative": {
+        "label": "Change background instead",
+        "fix": "Darken the container background so light text passes contrast.",
+        "fix_snippet": "background-color: #1f2937;",
+        "tradeoff": "Leaves text color untouched, but alters surrounding container background."
+      }
     }
   ],
   "new_findings": [
@@ -18,6 +24,12 @@
       "fix": "Apply high-contrast primary styling and padding to element #2.",
       "fix_snippet": "button.submit { background: #2563eb; color: #ffffff; padding: 10px 20px; }",
       "fix_value": "#2563eb",
+      "alternative": {
+        "label": "Outline button with thick border",
+        "fix": "Use a 2px prominent brand border and bold text.",
+        "fix_snippet": "border: 2px solid #2563eb; color: #2563eb;",
+        "tradeoff": "Lighter weight, but may blend in against noisy backgrounds."
+      },
       "evidence": "Element #2 has transparent background and thin border identical to secondary elements",
       "confidence": 0.95
     }

@@ -557,6 +557,63 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
       }
 
+      // Alternatives section (website mode only)
+      let alternativesHtml = "";
+      if (!isRepo && finding.alternatives && finding.alternatives.length > 0) {
+        const altItemsHtml = finding.alternatives.map((alt, altIdx) => {
+          const isAi = alt.source === "ai";
+          const pillClass = isAi ? "badge-ai" : "badge-computed";
+          const pillText = isAi ? "AI-suggested" : "Computed";
+
+          let altSnippetHtml = "";
+          if (alt.fix_snippet) {
+            altSnippetHtml = `
+              <div class="alt-snippet-row">
+                <pre class="fix-snippet-pre"><code>${escapeHtml(alt.fix_snippet)}</code></pre>
+                <button type="button" class="btn-copy copy-alt-snippet-btn" data-snippet="${escapeHtml(alt.fix_snippet)}" aria-label="Copy snippet for ${escapeHtml(alt.label)}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  <span>Copy snippet</span>
+                </button>
+              </div>
+            `;
+          }
+
+          let noteHtml = "";
+          if (alt.check_note) {
+            noteHtml = `<div class="alt-note-badge">${escapeHtml(alt.check_note)}</div>`;
+          }
+
+          return `
+            <div class="alternative-card" id="alt-${index}-${altIdx}">
+              <div class="alternative-header">
+                <span class="alternative-label">${escapeHtml(alt.label)}</span>
+                <span class="badge ${pillClass}">${pillText}</span>
+              </div>
+              <p class="alternative-desc">${escapeHtml(alt.description)}</p>
+              ${altSnippetHtml}
+              <div class="alternative-tradeoff">
+                <strong>Trade-off:</strong> ${escapeHtml(alt.tradeoff)}
+              </div>
+              ${noteHtml}
+            </div>
+          `;
+        }).join("");
+
+        alternativesHtml = `
+          <div class="finding-section alternatives-section">
+            <details class="alternatives-details">
+              <summary class="alternatives-summary">
+                <span class="alternatives-summary-title">Other ways to fix this (${finding.alternatives.length})</span>
+                <span class="alternatives-toggle-icon" aria-hidden="true">▾</span>
+              </summary>
+              <div class="alternatives-list">
+                ${altItemsHtml}
+              </div>
+            </details>
+          </div>
+        `;
+      }
+
       card.innerHTML = `
         <div class="card-top">
           <div class="badges-group">${badgesHtml}</div>
@@ -589,6 +646,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ${fixSnippetHtml}
             </div>
           </div>
+          ${alternativesHtml}
           ${compareHtml}
         </div>
 
@@ -670,6 +728,14 @@ document.addEventListener("DOMContentLoaded", () => {
           copyToClipboard(snippetText, copySnippetBtn, "Copied!", "Fix snippet copied to clipboard!");
         });
       }
+
+      card.querySelectorAll(".copy-alt-snippet-btn").forEach((altBtn) => {
+        altBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const snip = altBtn.getAttribute("data-snippet") || "";
+          copyToClipboard(snip, altBtn, "Copied!", "Alternative snippet copied to clipboard!");
+        });
+      });
 
       findingsList.appendChild(card);
     });

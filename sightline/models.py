@@ -86,6 +86,7 @@ class Finding:
     verified_note: str | None = None
     compare_image: str | None = None
     compare_note: str | None = None
+    alternatives: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
