@@ -16,6 +16,7 @@ from sightline.repo import github
 from sightline.site import capture as site_capture
 from sightline.site import checks as site_checks
 from sightline.site import marks
+from sightline.site.verify import verify_fixes
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,12 @@ def run(
             except Exception as exc:
                 notes.append(f"Gemma site review failed: {exc}")
                 findings = list(measured)
+
+        _step("Verifying fixes")
+        try:
+            findings = verify_fixes(url, snapshot, findings)
+        except Exception as exc:
+            notes.append(f"Fix verification failed: {exc}")
 
         _step("Drawing results")
         annotated_path = out_path / "annotated.png"
