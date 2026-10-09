@@ -12,8 +12,58 @@ from sightline.config import REPO_ROOT, settings
 from sightline.gemma import ask_json
 from sightline.merge import merge_findings
 from sightline.models import Finding, PageSnapshot, RepoSnapshot
+from sightline.site.alternatives import attach_measured_alternatives
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_ai_alternative(alt: Any) -> dict[str, Any] | None:
+    """Validate and sanitize an AI-generated alternative fix.
+
+    Drops the alternative if:
+    - Not a dictionary.
+    - Missing or non-string label, fix, or tradeoff.
+    - Overlong fix_snippet (>600 chars) or label (>60 chars).
+    - Contains <script> tags or javascript: URLs.
+    """
+    if not isinstance(alt, dict):
+        return None
+
+    label = alt.get("label")
+    fix = alt.get("fix")
+    tradeoff = alt.get("tradeoff")
+    snippet = alt.get("fix_snippet", "")
+
+    if not isinstance(label, str) or not isinstance(fix, str) or not isinstance(tradeoff, str):
+        return None
+
+    label_str = label.strip()
+    fix_str = fix.strip()
+    tradeoff_str = tradeoff.strip()
+    snippet_str = str(snippet).strip() if snippet is not None else ""
+
+    if not label_str or not fix_str:
+        return None
+
+    # Length limits
+    if len(label_str) > 60:
+        return None
+    if len(snippet_str) > 600:
+        return None
+
+    # Security check: drop if script tags or javascript: URLs present
+    combined = f"{label_str} {fix_str} {tradeoff_str} {snippet_str}".lower()
+    if "<script" in combined or "javascript:" in combined:
+        return None
+
+    return {
+        "label": label_str,
+        "description": fix_str,
+        "fix_snippet": snippet_str,
+        "tradeoff": tradeoff_str,
+        "source": "ai",
+        "check_note": "not browser-verified",
+    }
 
 
 def _load_prompt_template(filename: str) -> str:
@@ -42,6 +92,7 @@ def normalize_text(text: str | None) -> str:
 def _apply_enrichment(
     measured: list[Finding],
     enrich_list: list[dict[str, Any]],
+    max_ai_alts: int = 3,
 ) -> list[Finding]:
     """Enrich measured findings with Gemma rationale and fix recommendations."""
     enriched = [copy.copy(f) for f in measured]
@@ -51,7 +102,9 @@ def _apply_enrichment(
         if isinstance(item, dict) and "id" in item
     }
 
+    ai_alt_count = 0
     for f in enriched:
+        f.alternatives = list(f.alternatives)
         if f.id in enrich_by_id:
             enr = enrich_by_id[f.id]
             if enr.get("why_it_matters"):
@@ -62,6 +115,11 @@ def _apply_enrichment(
                 f.fix_snippet = str(enr["fix_snippet"])
             if enr.get("fix_value") is not None:
                 f.fix_value = str(enr["fix_value"])
+            if "alternative" in enr and ai_alt_count < max_ai_alts:
+                ai_alt = _validate_ai_alternative(enr["alternative"])
+                if ai_alt is not None:
+                    f.alternatives.append(ai_alt)
+                    ai_alt_count += 1
             f.verified = True
             f.verified_note = "Enriched by Gemma"
 
@@ -142,7 +200,7 @@ def review_site(
     )
     if not isinstance(data, dict):
         logger.warning("Gemma site review returned no valid JSON; returning measured findings.")
-        return list(measured)
+        return attach_measured_alternatives(snapshot, list(measured))
 
     # 1. Apply enrichment to measured findings
     enrich_list = data.get("enrich", [])
@@ -204,11 +262,17 @@ def review_site(
             verified=True,
             verified_note=f"Verified element #{el_num}",
         )
+        if "alternative" in raw and isinstance(raw["alternative"], dict):
+            ai_alt = _validate_ai_alternative(raw["alternative"])
+            if ai_alt is not None:
+                finding.alternatives.append(ai_alt)
+
         validated_ai.append(finding)
         if len(validated_ai) >= 8:
             break
 
-    return merge_findings(enriched_measured, validated_ai)
+    merged = merge_findings(enriched_measured, validated_ai)
+    return attach_measured_alternatives(snapshot, merged)
 
 
 def review_repo(

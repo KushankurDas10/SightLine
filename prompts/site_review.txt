@@ -8,12 +8,14 @@ Your tasks:
    - `fix`: Clear actionable recommendation to resolve the issue.
    - `fix_snippet`: Optional short code snippet (e.g. CSS style) or null.
    - `fix_value`: For low-contrast issues, provide a recommended high-contrast hex colour code (e.g. "#1e40af"); for missing accessible names, provide a concise descriptive label (e.g. "Search"); otherwise null.
+   - `alternative`: Optional object with {"label", "fix", "fix_snippet", "tradeoff"} proposing ONE alternative way to fix this issue, in short plain language, different from the main fix.
 
 2. IDENTIFY NEW visual and design problems that automated checks cannot detect:
    - Focus on visual hierarchy, confusing layout, unclear or unintuitive icons, text overlapping images, spacing, and typographic readability.
    - Every new finding MUST link to a real element present in the screenshot and specify its exact `element_number`.
    - Provide concrete visual `evidence` observable in the screenshot.
    - If unsure about a problem, say nothing. Do not invent non-existent element numbers.
+   - `alternative`: Optional object with {"label", "fix", "fix_snippet", "tradeoff"} proposing ONE alternative way to fix this issue.
 
 CRITICAL RULES:
 - Use only the provided information.
@@ -28,7 +30,13 @@ JSON Schema:
       "why_it_matters": "Users with low vision cannot read this text against the white background.",
       "fix": "Darken the text color to meet WCAG AA contrast ratio of at least 4.5:1.",
       "fix_snippet": "color: #1e3a8a;",
-      "fix_value": "#1e3a8a"
+      "fix_value": "#1e3a8a",
+      "alternative": {
+        "label": "Change background instead",
+        "fix": "Darken the container background so light text passes contrast.",
+        "fix_snippet": "background-color: #1f2937;",
+        "tradeoff": "Leaves text color untouched, but alters surrounding container background."
+      }
     }
   ],
   "new_findings": [
@@ -41,6 +49,12 @@ JSON Schema:
       "fix": "Apply high-contrast solid background and padding to emphasize the primary button.",
       "fix_snippet": "background-color: #2563eb; color: #ffffff; padding: 10px 20px;",
       "fix_value": "#2563eb",
+      "alternative": {
+        "label": "Outline button with thick border",
+        "fix": "Use a 2px prominent brand border and bold text.",
+        "fix_snippet": "border: 2px solid #2563eb; color: #2563eb;",
+        "tradeoff": "Lighter weight, but may blend in against noisy backgrounds."
+      },
       "evidence": "Element #3 has minimal visual separation and identical styling to secondary elements.",
       "confidence": 0.95
     }

@@ -16,6 +16,7 @@ from sightline.repo import github
 from sightline.site import capture as site_capture
 from sightline.site import checks as site_checks
 from sightline.site import marks
+from sightline.site.alternatives import attach_measured_alternatives
 from sightline.site.verify import verify_fixes
 
 logger = logging.getLogger(__name__)
@@ -138,6 +139,8 @@ def run(
             except Exception as exc:
                 notes.append(f"Gemma site review failed: {exc}")
                 findings = list(measured)
+
+        findings = attach_measured_alternatives(snapshot, findings)
 
         _step("Verifying fixes")
         try:

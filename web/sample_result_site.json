@@ -29,7 +29,25 @@
       "verified": true,
       "verified_note": "re-checked after applying the fix",
       "compare_image": "/static/demo/compare_site-001.png",
-      "compare_note": "Contrast 1.5:1 -> 17.7:1"
+      "compare_note": "Contrast 1.5:1 -> 17.7:1",
+      "alternatives": [
+        {
+          "label": "Closest passing color",
+          "description": "Keep existing hue and adjust text lightness to satisfy WCAG AA contrast.",
+          "fix_snippet": "color: #767676;",
+          "tradeoff": "Preserves brand hue, but alters text lightness.",
+          "source": "measured",
+          "check_note": "contrast 4.5:1 (passes AA) (computed)"
+        },
+        {
+          "label": "Change the background instead",
+          "description": "Keep text color unchanged and adjust background lightness to pass contrast.",
+          "fix_snippet": "background-color: #374151;",
+          "tradeoff": "Leaves text color untouched, but alters surrounding container background.",
+          "source": "measured",
+          "check_note": "contrast 4.8:1 (passes AA) (computed)"
+        }
+      ]
     },
     {
       "id": "site-002",
@@ -55,7 +73,17 @@
       "verified": true,
       "verified_note": "re-checked after applying the fix",
       "compare_image": "/static/demo/compare_site-002.png",
-      "compare_note": "Accessible name: None -> \"Settings\""
+      "compare_note": "Accessible name: None -> \"Settings\"",
+      "alternatives": [
+        {
+          "label": "Screen reader only text (.sr-only)",
+          "description": "Embed visually hidden text inside the control using standard utility CSS.",
+          "fix_snippet": "<button class=\"planted-icon-button\">\n  <span class=\"sr-only\">Settings</span>\n</button>\n\n/* CSS */\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border: 0;\n}",
+          "tradeoff": "Better compatibility across translation tools and legacy assistive tech, but requires extra markup and CSS.",
+          "source": "measured",
+          "check_note": "not browser-verified"
+        }
+      ]
     },
     {
       "id": "site-003",
@@ -81,7 +109,25 @@
       "verified": true,
       "verified_note": "re-checked after applying the fix",
       "compare_image": "/static/demo/compare_site-003.png",
-      "compare_note": "Target size 10x10 px -> 24x24 px"
+      "compare_note": "Target size 10x10 px -> 24x24 px",
+      "alternatives": [
+        {
+          "label": "Expand padding with inline-flex",
+          "description": "Increase touch target by adding padding and centered alignment.",
+          "fix_snippet": "display: inline-flex;\nalign-items: center;\njustify-content: center;\npadding: 7px 7px;",
+          "tradeoff": "Preserves inner icon proportions, but increases outer spacing.",
+          "source": "measured",
+          "check_note": "Current 10x10 px -> target 24x24 px (computed)"
+        },
+        {
+          "label": "Invisible pseudo-element hit area",
+          "description": "Expand clickable area with an invisible ::after pseudo-element.",
+          "fix_snippet": "position: relative;\n&::after {\n  content: '';\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  min-width: 24px;\n  min-height: 24px;\n  width: 100%;\n  height: 100%;\n}",
+          "tradeoff": "Zero layout shift on surrounding items, but pseudo-elements may overlap nearby links.",
+          "source": "measured",
+          "check_note": "Current 10x10 px -> target 24x24 px (computed)"
+        }
+      ]
     }
   ],
   "issues": {
