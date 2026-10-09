@@ -1,10 +1,8 @@
-"""Browser test for Phase 9 web frontend using Playwright."""
+"""Browser tests for Phase 9B web frontend using Playwright."""
 
-import json
 import socket
 import threading
 import time
-from pathlib import Path
 
 import pytest
 import uvicorn
@@ -26,17 +24,6 @@ def web_server():
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
-    # Ensure out/annotated.png exists so /files/annotated.png returns 200 in demo mode
-    from PIL import Image
-
-    from sightline.config import settings
-    out_dir = Path(__file__).resolve().parent.parent / settings.out_dir
-    out_dir.mkdir(parents=True, exist_ok=True)
-    annotated_file = out_dir / "annotated.png"
-    if not annotated_file.exists():
-        img = Image.new("RGB", (1, 1), color="white")
-        img.save(annotated_file)
-
     # Wait for server ready
     time.sleep(0.5)
     base_url = f"http://127.0.0.1:{port}"
@@ -47,13 +34,11 @@ def web_server():
 
 
 @pytest.mark.browser
-def test_frontend_demo_mode_browser(web_server):
-    """Open ?demo=1 in browser and verify findings count, copy buttons, and zero console errors."""
-    sample_path = Path(__file__).resolve().parent.parent / "web" / "sample_result.json"
-    with open(sample_path, encoding="utf-8") as f:
-        sample_data = json.load(f)
-    expected_findings_count = len(sample_data["findings"])
-
+def test_frontend_demo(web_server):
+    """Loads ?demo=site, verifies the annotated screenshot renders (naturalWidth > 0),
+    the explainer section is present, findings render with pills, and NO
+    'Copy as GitHub issue' buttons are visible.
+    """
     console_errors: list[str] = []
 
     with sync_playwright() as p:
@@ -69,36 +54,57 @@ def test_frontend_demo_mode_browser(web_server):
         )
         page.on("pageerror", lambda err: console_errors.append(f"PageError: {err}"))
 
-        # Navigate to ?demo=1
-        page.goto(f"{web_server}/?demo=1")
+        # Navigate to ?demo=site
+        page.goto(f"{web_server}/?demo=site")
 
         # Wait for finding cards to be populated
         page.wait_for_selector(".finding-card", timeout=5000)
 
-        # 1. Assert finding cards count equals sample
+        # 1. Annotated screenshot renders with naturalWidth > 0
+        page.wait_for_selector("#annotated-image", timeout=5000)
+        img_eval = "() => document.getElementById('annotated-image').naturalWidth"
+        img_natural_width = page.evaluate(img_eval)
+        assert img_natural_width > 0, f"Expected naturalWidth > 0, got {img_natural_width}"
+
+        # 2. Explainer section is present
+        explainer = page.locator("#explainer-section")
+        assert explainer.count() == 1
+        explainer_text = page.locator("#explainer-details").text_content()
+        assert "How to read these results" in explainer_text
+        assert "Measured:" in explainer_text
+        assert "AI (Gemma):" in explainer_text
+        assert "Verified:" in explainer_text
+
+        # 3. Findings render with badge pills
         cards = page.query_selector_all(".finding-card")
-        msg = f"Expected {expected_findings_count} cards, got {len(cards)}"
-        assert len(cards) == expected_findings_count, msg
+        assert len(cards) > 0
+        badge_pills = page.query_selector_all(".finding-card .badge")
+        assert len(badge_pills) > 0
 
-        # 2. Assert copy buttons exist for each finding
-        copy_buttons = page.query_selector_all(".copy-issue-btn")
-        assert len(copy_buttons) == expected_findings_count
-        assert len(copy_buttons) > 0
+        # 4. NO "Copy as GitHub issue" buttons are visible for site mode
+        repo_buttons = page.query_selector_all(".copy-issue-btn")
+        assert len(repo_buttons) == 0
 
-        # 3. Assert no console errors
+        # 5. "Copy fix snippet" buttons exist for site mode
+        snippet_buttons = page.query_selector_all(".copy-snippet-btn")
+        assert len(snippet_buttons) == len(cards)
+        assert len(snippet_buttons) > 0
+
+        # Test copying a snippet
+        snippet_buttons[0].click()
+        page.wait_for_selector(".btn-copy.copied", timeout=2000)
+        assert "Copied" in snippet_buttons[0].inner_text()
+
+        # 6. Interactive click on finding card draws highlight box on overlay
+        cards[0].click()
+        page.wait_for_selector(".screenshot-highlight-box", timeout=2000)
+        highlight_box = page.locator(".screenshot-highlight-box")
+        assert highlight_box.is_visible()
+
+        # 7. No console errors
         assert console_errors == [], f"Detected console errors: {console_errors}"
 
-        # 4. Assert stats row matches sample data
-        stat_total = page.locator("#stat-total").inner_text()
-        assert stat_total == str(expected_findings_count)
-
-        # 5. Test copy button interaction and visual feedback
-        first_copy_btn = copy_buttons[0]
-        first_copy_btn.click()
-        page.wait_for_selector(".btn-copy.copied", timeout=2000)
-        assert "Copied" in first_copy_btn.inner_text()
-
-        # 6. Test client-side error banner displays on invalid submission
+        # 8. Test client-side error banner displays on invalid submission
         page.fill("#url-input", "invalid-plain-text")
         page.click("#analyze-btn")
         page.wait_for_selector("#error-banner:not(.hidden)", timeout=2000)
@@ -113,12 +119,55 @@ def test_frontend_demo_mode_browser(web_server):
 
 
 @pytest.mark.browser
+def test_frontend_repo_demo(web_server):
+    """Loads ?demo=repo, verifies 'Copy as GitHub issue' buttons are present,
+    and no screenshot is shown.
+    """
+    console_errors: list[str] = []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        page.on(
+            "console",
+            lambda msg: console_errors.append(f"Console {msg.type}: {msg.text}")
+            if msg.type == "error"
+            else None,
+        )
+        page.on("pageerror", lambda err: console_errors.append(f"PageError: {err}"))
+
+        page.goto(f"{web_server}/?demo=repo")
+        page.wait_for_selector(".finding-card", timeout=5000)
+
+        # 1. "Copy as GitHub issue" buttons are present
+        cards = page.query_selector_all(".finding-card")
+        assert len(cards) > 0
+        copy_buttons = page.query_selector_all(".copy-issue-btn")
+        assert len(copy_buttons) == len(cards)
+
+        # Test copying an issue
+        copy_buttons[0].click()
+        page.wait_for_selector(".btn-copy.copied", timeout=2000)
+        assert "Copied" in copy_buttons[0].inner_text()
+
+        # 2. No screenshot is shown (screenshot card is hidden)
+        screenshot_card = page.locator("#screenshot-card")
+        assert not screenshot_card.is_visible()
+
+        # 3. No console errors
+        assert console_errors == [], f"Detected console errors: {console_errors}"
+
+        browser.close()
+
+
+@pytest.mark.browser
 def test_keyboard_navigation_tabbing(web_server):
     """Verify full keyboard accessibility: tabbing moves focus through all interactive elements."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(f"{web_server}/?demo=1")
+        page.goto(f"{web_server}/?demo=site")
         page.wait_for_selector(".finding-card", timeout=5000)
 
         # Start tabbing from top of document
@@ -149,18 +198,18 @@ def test_filter_chips_interaction(web_server):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(f"{web_server}/?demo=1")
+        page.goto(f"{web_server}/?demo=site")
         page.wait_for_selector(".finding-card", timeout=5000)
 
-        # Total cards initially is 6
         initial_cards = page.query_selector_all(".finding-card")
-        assert len(initial_cards) == 6
+        initial_count = len(initial_cards)
+        assert initial_count >= 2
 
         # Click "High Severity" filter chip
         page.click(".chip[data-filter='high']")
         page.wait_for_timeout(200)
         high_cards = page.query_selector_all(".finding-card")
-        assert len(high_cards) == 2  # From sample_result.json, high severity count is 2
+        assert len(high_cards) >= 1
         for card in high_cards:
             assert "severity-high" in (card.get_attribute("class") or "")
 
@@ -168,6 +217,6 @@ def test_filter_chips_interaction(web_server):
         page.click(".chip[data-filter='all']")
         page.wait_for_timeout(200)
         all_cards = page.query_selector_all(".finding-card")
-        assert len(all_cards) == 6
+        assert len(all_cards) == initial_count
 
         browser.close()

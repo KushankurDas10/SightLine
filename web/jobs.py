@@ -27,6 +27,11 @@ def count_active_jobs() -> int:
 
 def _execute_job(job_id: str, mode: str, url: str, with_site: bool) -> None:
     """Execute pipeline in worker thread and update job status."""
+    from sightline.config import settings
+
+    job_out_dir = settings.out_dir / job_id
+    job_out_dir.mkdir(parents=True, exist_ok=True)
+
     def on_step(step_name: str) -> None:
         with _lock:
             if job_id in JOBS:
@@ -42,21 +47,26 @@ def _execute_job(job_id: str, mode: str, url: str, with_site: bool) -> None:
             result = run(
                 mode=mode,
                 url=url,
+                out_dir=job_out_dir,
                 with_site=with_site,
                 on_step=on_step,
                 on_partial=on_partial,
             )
         except TypeError:
-            # Fallback for monkeypatched run signatures without on_partial
+            # Fallback for monkeypatched run signatures without out_dir/on_partial
             result = run(mode=mode, url=url, with_site=with_site, on_step=on_step)
+
+        res_dict = result.to_dict() if hasattr(result, "to_dict") else dict(result)
+        if isinstance(res_dict, dict) and res_dict.get("annotated_image"):
+            res_dict["annotated_image"] = f"/files/{job_id}/annotated.png"
+        if hasattr(result, "annotated_image") and result.annotated_image:
+            result.annotated_image = f"/files/{job_id}/annotated.png"
 
         with _lock:
             if job_id in JOBS:
                 JOBS[job_id]["status"] = "done"
                 JOBS[job_id]["step"] = "Completed"
-                JOBS[job_id]["result"] = (
-                    result.to_dict() if hasattr(result, "to_dict") else result
-                )
+                JOBS[job_id]["result"] = res_dict
     except Exception as exc:
         logger.exception("Pipeline job %s failed: %s", job_id, exc)
         with _lock:

@@ -103,8 +103,39 @@ def get_job(job_id: str) -> dict[str, Any]:
     return job_data
 
 
-# Serve generated files from out/ at /files
-app.mount("/files", StaticFiles(directory=str(OUT_DIR)), name="files")
+@app.get("/files/{file_path:path}")
+def serve_file(file_path: str) -> FileResponse:
+    """Serve generated analysis artifacts securely, preventing directory traversal."""
+    base_dir = OUT_DIR.resolve()
+    target_path = (base_dir / file_path).resolve()
+    try:
+        target_path.relative_to(base_dir)
+    except ValueError:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: path traversal detected.",
+        )
+    if not target_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found.")
+    return FileResponse(target_path)
+
+
+@app.get("/demo/{file_path:path}")
+def serve_demo(file_path: str) -> FileResponse:
+    """Serve demo static assets."""
+    base_dir = (STATIC_DIR / "demo").resolve()
+    target_path = (base_dir / file_path).resolve()
+    try:
+        target_path.relative_to(base_dir)
+    except ValueError:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: path traversal detected.",
+        )
+    if not target_path.is_file():
+        raise HTTPException(status_code=404, detail="Demo file not found.")
+    return FileResponse(target_path)
+
 
 # Serve assets from web/static at /static
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

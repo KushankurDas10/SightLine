@@ -215,3 +215,74 @@ def test_job_partial_results():
     assert "partial" not in job_data_done
     assert "result" in job_data_done
 
+
+def test_jobs_unique_folders(monkeypatch):
+    """Verify two consecutive jobs write to different out/<job_id>/ folders
+    and return different /files/<job_id>/ URLs.
+    """
+    from sightline.config import settings
+
+    captured_out_dirs = []
+
+    def mock_run(mode, url, out_dir=None, on_step=None, with_site=False, on_partial=None):
+        captured_out_dirs.append(out_dir)
+        if out_dir:
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / "annotated.png").write_text("dummy image", encoding="utf-8")
+        return AnalysisResult(
+            mode="site",
+            url=url,
+            title="Test",
+            findings=[],
+            annotated_image=str(out_dir / "annotated.png") if out_dir else None,
+            issues={},
+            notes=[],
+            stats={},
+        )
+
+    monkeypatch.setattr("web.jobs.run", mock_run)
+
+    # Job 1
+    r1 = client.post("/api/analyze", json={"mode": "site", "url": "https://example.com/1"})
+    assert r1.status_code == 200
+    job1_id = r1.json()["job_id"]
+
+    for _ in range(50):
+        data1 = client.get(f"/api/jobs/{job1_id}").json()
+        if data1["status"] == "done":
+            break
+        time.sleep(0.05)
+    assert data1["status"] == "done"
+
+    # Job 2
+    r2 = client.post("/api/analyze", json={"mode": "site", "url": "https://example.com/2"})
+    assert r2.status_code == 200
+    job2_id = r2.json()["job_id"]
+
+    for _ in range(50):
+        data2 = client.get(f"/api/jobs/{job2_id}").json()
+        if data2["status"] == "done":
+            break
+        time.sleep(0.05)
+    assert data2["status"] == "done"
+
+    assert job1_id != job2_id
+    assert captured_out_dirs[0] != captured_out_dirs[1]
+    assert captured_out_dirs[0] == settings.out_dir / job1_id
+    assert captured_out_dirs[1] == settings.out_dir / job2_id
+
+    url1 = data1["result"]["annotated_image"]
+    url2 = data2["result"]["annotated_image"]
+    assert url1 != url2
+    assert url1 == f"/files/{job1_id}/annotated.png"
+    assert url2 == f"/files/{job2_id}/annotated.png"
+
+
+def test_files_endpoint_traversal():
+    """Verify that path traversal attempts on /files return 404 or 403."""
+    res = client.get("/files/../../etc/passwd")
+    assert res.status_code in (403, 404)
+
+    res_encoded = client.get("/files/..%2F..%2Fetc/passwd")
+    assert res_encoded.status_code in (403, 404)
+
