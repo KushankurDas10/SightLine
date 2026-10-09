@@ -4,18 +4,182 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SightLine</title>
+  <meta name="description" content="Measured and AI-assisted accessibility and repository inspector using Playwright and Gemma.">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div id="app">
-    <header>
-      <h1>SightLine</h1>
-      <p>Measured & AI-assisted Accessibility and Repository Inspector</p>
+  <div class="app-layout">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="brand">
+          <div class="brand-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div>
+            <h1 class="app-title">SightLine</h1>
+            <p class="app-tagline">Measured &amp; AI-assisted Accessibility and Repository Inspector</p>
+          </div>
+        </div>
+        <button id="load-demo-btn" type="button" class="btn btn-secondary btn-sm" aria-label="Load demo sample audit">
+          Load Sample Demo
+        </button>
+      </div>
     </header>
-    <main id="main-content">
-      <!-- UI elements populated in later phases -->
+
+    <main id="main-content" class="main-container">
+      <!-- Error Banner -->
+      <div id="error-banner" class="alert-banner hidden" role="alert" aria-live="assertive">
+        <div class="alert-icon" aria-hidden="true">!</div>
+        <div id="error-message" class="alert-text"></div>
+        <button id="error-dismiss-btn" type="button" class="btn-close" aria-label="Dismiss error">✕</button>
+      </div>
+
+      <!-- Audit Input Card -->
+      <section class="card form-card" aria-labelledby="audit-heading">
+        <h2 id="audit-heading" class="sr-only">Run Accessibility or Repository Audit</h2>
+        <form id="audit-form" novalidate>
+          <fieldset class="mode-fieldset">
+            <legend class="field-label">Target Mode</legend>
+            <div class="toggle-group" role="radiogroup" aria-label="Inspection Target">
+              <label class="toggle-option" id="mode-site-label">
+                <input type="radio" name="mode" id="mode-site" value="site" checked>
+                <span class="toggle-text">Website URL</span>
+              </label>
+              <label class="toggle-option" id="mode-repo-label">
+                <input type="radio" name="mode" id="mode-repo" value="repo">
+                <span class="toggle-text">GitHub Repository</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="form-group">
+            <label for="url-input" id="url-label" class="field-label">Website URL</label>
+            <div class="input-row">
+              <input 
+                type="url" 
+                id="url-input" 
+                name="url" 
+                class="text-input" 
+                placeholder="https://example.com" 
+                required 
+                autocomplete="off"
+                aria-required="true"
+                aria-describedby="url-hint"
+              >
+              <button type="submit" id="analyze-btn" class="btn btn-primary">
+                <span class="btn-text">Analyze</span>
+              </button>
+            </div>
+            <p id="url-hint" class="field-hint">Enter a public or permitted local HTTP/HTTPS webpage URL.</p>
+          </div>
+        </form>
+      </section>
+
+      <!-- Progress Area -->
+      <section id="progress-area" class="card progress-card hidden" role="status" aria-live="polite">
+        <div class="spinner-row">
+          <div class="spinner" aria-hidden="true"></div>
+          <div class="progress-details">
+            <h2 id="progress-status-text" class="progress-title">Analyzing target...</h2>
+            <p id="progress-step-text" class="progress-sub">Initializing browser snapshot and automated tests...</p>
+          </div>
+        </div>
+        <ol id="steps-list" class="steps-list" aria-label="Audit progress steps"></ol>
+      </section>
+
+      <!-- Empty State -->
+      <section id="empty-state" class="card empty-state-card">
+        <div class="empty-icon" aria-hidden="true">🔍</div>
+        <h2 class="empty-title">Ready to Inspect</h2>
+        <p class="empty-desc">
+          Enter a website URL or GitHub repository above to run automated WCAG and code quality checks,
+          enriched and evidenced with Google Gemma 4 analysis.
+        </p>
+        <button id="quick-demo-btn" type="button" class="btn btn-outline">
+          Explore Sample Results (?demo=1)
+        </button>
+      </section>
+
+      <!-- Results Container -->
+      <div id="results-container" class="results-container hidden" aria-labelledby="results-heading">
+        <!-- Target Header & Summary -->
+        <header class="results-header">
+          <div>
+            <span id="result-badge-mode" class="badge badge-subtle">Website</span>
+            <h2 id="results-heading" class="results-title">Analysis Results</h2>
+            <a id="results-url-link" href="#" target="_blank" rel="noopener noreferrer" class="results-url">https://example.com</a>
+          </div>
+        </header>
+
+        <!-- Repository Summary Block (repo mode) -->
+        <section id="repo-summary-card" class="card summary-card hidden" aria-labelledby="summary-heading">
+          <h3 id="summary-heading" class="summary-heading">Repository Summary</h3>
+          <p id="repo-summary-text" class="summary-text"></p>
+        </section>
+
+        <!-- Annotated Screenshot View (site mode) -->
+        <section id="screenshot-card" class="card screenshot-card hidden" aria-labelledby="screenshot-heading">
+          <div class="card-header">
+            <h3 id="screenshot-heading" class="card-title">Annotated Visual Snapshot</h3>
+            <span class="badge badge-info">Elements Marked</span>
+          </div>
+          <div class="screenshot-wrapper">
+            <img id="annotated-image" src="" alt="Annotated screenshot with marked visual hierarchy and contrast defects" class="screenshot-img">
+          </div>
+        </section>
+
+        <!-- Stats Overview Row -->
+        <section class="stats-grid" aria-label="Audit Statistics">
+          <div class="stat-card">
+            <div class="stat-num" id="stat-total">0</div>
+            <div class="stat-label">Total Findings</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-measured">0</div>
+            <div class="stat-label">Measured (Rule-based)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-ai">0</div>
+            <div class="stat-label">AI-Suggested (Gemma)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-verified">0</div>
+            <div class="stat-label">Verified Fixes</div>
+          </div>
+        </section>
+
+        <!-- Filter Chips -->
+        <section class="filters-card" aria-label="Filter findings">
+          <span class="filter-label" id="filter-group-label">Filter:</span>
+          <div class="filter-chips" role="group" aria-labelledby="filter-group-label">
+            <button type="button" class="chip active" data-filter="all" aria-pressed="true">All Findings</button>
+            <button type="button" class="chip" data-filter="high" aria-pressed="false">High Severity</button>
+            <button type="button" class="chip" data-filter="medium" aria-pressed="false">Medium</button>
+            <button type="button" class="chip" data-filter="low" aria-pressed="false">Low</button>
+            <button type="button" class="chip" data-filter="measured" aria-pressed="false">Measured Only</button>
+            <button type="button" class="chip" data-filter="ai" aria-pressed="false">AI Only</button>
+            <button type="button" class="chip" data-filter="verified" aria-pressed="false">Verified Fixes</button>
+          </div>
+        </section>
+
+        <!-- Findings Cards List -->
+        <section aria-labelledby="findings-list-title">
+          <h3 id="findings-list-title" class="sr-only">Detailed Findings</h3>
+          <div id="findings-list" class="findings-list"></div>
+        </section>
+      </div>
     </main>
+
+    <!-- Accessible Notification Toast -->
+    <div id="toast" class="toast hidden" role="status" aria-live="polite">
+      <span id="toast-message">Issue copied to clipboard!</span>
+    </div>
   </div>
+
   <script src="/static/app.js"></script>
 </body>
 </html>
