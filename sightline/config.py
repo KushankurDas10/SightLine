@@ -20,7 +20,7 @@ class Settings:
     """Application settings read from environment variables."""
 
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
-    gemma_model: str = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
+    gemma_model: str = os.getenv("GEMMA_MODEL") or "gemma-4-26b-a4b-it"
     github_token: str = os.getenv("GITHUB_TOKEN", "")
     mock: bool = os.getenv("MOCK", "0").strip().lower() in ("1", "true", "yes")
     allow_private_urls: bool = os.getenv("ALLOW_PRIVATE_URLS", "0").strip().lower() in (
@@ -28,7 +28,7 @@ class Settings:
         "true",
         "yes",
     )
-    out_dir: Path = Path(os.getenv("OUT_DIR", "out"))
+    out_dir: Path = Path(os.getenv("OUT_DIR") or "out")
     prompts_dir: Path = PROMPTS_DIR
     mock_data_dir: Path = MOCK_DATA_DIR
 
