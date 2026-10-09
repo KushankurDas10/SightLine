@@ -2,22 +2,61 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Test Page</title>
+  <title>SightLine Test Fixture Page</title>
   <style>
-    .low-contrast {
-      color: #999999;
+    body {
+      margin: 20px;
       background-color: #ffffff;
+      font-family: sans-serif;
     }
-    .small-button {
-      width: 16px;
-      height: 16px;
+    .planted-low-contrast {
+      color: #d1d5db;
+      background-color: #ffffff;
+      font-size: 16px;
+    }
+    .planted-icon-button {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .planted-tiny-link {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      font-size: 8px;
+      line-height: 10px;
+      text-decoration: none;
+      color: #2563eb;
+    }
+    .good-button {
+      display: inline-block;
+      width: 120px;
+      height: 44px;
+      background-color: #1e3a8a;
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Test Heading</h1>
-  <button class="small-button">X</button>
-  <p class="low-contrast">Low contrast text snippet</p>
-  <img src="avatar.png">
+  <h1>Test Page</h1>
+
+  <!-- Problem 1: Light-gray text on white -->
+  <p class="planted-low-contrast">This is light-gray text on white background.</p>
+
+  <!-- Problem 2: An icon-only button with no accessible name -->
+  <button class="planted-icon-button">
+    <svg width="16" height="16" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="6" fill="#666" />
+    </svg>
+  </button>
+
+  <!-- Problem 3: A 10x10 px link -->
+  <a href="#tiny" class="planted-tiny-link">x</a>
+
+  <!-- Plus one good button -->
+  <button class="good-button">Save Changes</button>
 </body>
 </html>
