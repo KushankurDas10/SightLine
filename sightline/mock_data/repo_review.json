@@ -1,5 +1,28 @@
 {
-  "summary": "Sample repository with core Python modules and basic documentation.",
+  "summary": "This repository provides a sample project configured for Python test execution. It contains project configuration files and documentation for testing. Designed as a fixture for automated repository validation.",
+  "enrich": [
+    {
+      "id": "repo-001",
+      "why_it_matters": "New users cannot immediately run the CLI without knowing prerequisite steps.",
+      "fix": "Add pip install -e . before running the command.",
+      "fix_snippet": "pip install -e .",
+      "fix_value": "pip install -e ."
+    }
+  ],
+  "new_findings": [
+    {
+      "file_path": "README.md",
+      "rule": "readme-clarity",
+      "severity": "low",
+      "problem": "README provides incomplete quickstart command that misses package setup",
+      "why_it_matters": "New users cannot immediately run the CLI without knowing prerequisite steps.",
+      "fix": "Add pip install -e . before running the command.",
+      "fix_snippet": "pip install -e . && pytest",
+      "fix_value": "pip install -e .",
+      "evidence": "pytest",
+      "confidence": 0.90
+    }
+  ],
   "findings": [
     {
       "file_path": "README.md",
@@ -8,9 +31,9 @@
       "problem": "README provides incomplete quickstart command that misses package setup",
       "why_it_matters": "New users cannot immediately run the CLI without knowing prerequisite steps.",
       "fix": "Add pip install -e . before running the command.",
-      "fix_snippet": "pip install -e . && sightline --help",
+      "fix_snippet": "pip install -e . && pytest",
       "fix_value": "pip install -e .",
-      "evidence": "python run.py",
+      "evidence": "pytest",
       "confidence": 0.90
     }
   ]
