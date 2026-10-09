@@ -4,30 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SightLine</title>
-  <meta name="description" content="Measured and AI-assisted accessibility and repository inspector using Playwright and Gemma.">
+  <meta name="description" content="Measured and AI-assisted accessibility and repository inspector using Playwright and Google Gemma.">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <div class="app-layout">
+    <!-- Header -->
     <header class="app-header">
       <div class="header-content">
         <div class="brand">
           <div class="brand-icon" aria-hidden="true">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
           </div>
           <div>
-            <h1 class="app-title">SightLine</h1>
-            <p class="app-tagline">Measured &amp; AI-assisted Accessibility and Repository Inspector</p>
+            <div class="brand-title-row">
+              <h1 class="app-title">SightLine</h1>
+              <span class="version-tag">WCAG 2.2 &amp; Code Inspector</span>
+            </div>
+            <p class="app-tagline">Measured rules &amp; Gemma 4 review for accessible, resilient web applications</p>
           </div>
         </div>
-        <button id="load-demo-btn" type="button" class="btn btn-secondary btn-sm" aria-label="Load demo sample audit">
-          Load Sample Demo
-        </button>
+        <div class="header-actions">
+          <button id="theme-toggle" type="button" class="btn btn-icon theme-toggle-btn" aria-label="Toggle dark and light theme" title="Toggle theme">
+            <span class="theme-icon light-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+            </span>
+            <span class="theme-icon dark-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </span>
+          </button>
+          <button id="load-demo-btn" type="button" class="btn btn-secondary btn-sm" aria-label="Load demo sample audit">
+            Load Demo
+          </button>
+        </div>
       </div>
     </header>
 
@@ -48,11 +74,23 @@
             <div class="toggle-group" role="radiogroup" aria-label="Inspection Target">
               <label class="toggle-option" id="mode-site-label">
                 <input type="radio" name="mode" id="mode-site" value="site" checked>
-                <span class="toggle-text">Website URL</span>
+                <span class="toggle-text">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                  </svg>
+                  Website URL
+                </span>
               </label>
               <label class="toggle-option" id="mode-repo-label">
                 <input type="radio" name="mode" id="mode-repo" value="repo">
-                <span class="toggle-text">GitHub Repository</span>
+                <span class="toggle-text">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                  </svg>
+                  GitHub Repository
+                </span>
               </label>
             </div>
           </fieldset>
@@ -72,37 +110,95 @@
                 aria-describedby="url-hint"
               >
               <button type="submit" id="analyze-btn" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
                 <span class="btn-text">Analyze</span>
               </button>
             </div>
-            <p id="url-hint" class="field-hint">Enter a public or permitted local HTTP/HTTPS webpage URL.</p>
+            <div class="form-sub-row">
+              <p id="url-hint" class="field-hint">Enter a public or permitted local HTTP/HTTPS webpage URL.</p>
+              <div class="sample-links">
+                <span class="sample-label">Quick samples:</span>
+                <button type="button" id="demo-site-link" class="link-btn">Website (?demo=site)</button>
+                <span aria-hidden="true" class="divider">·</span>
+                <button type="button" id="demo-repo-link" class="link-btn">Repo (?demo=repo)</button>
+              </div>
+            </div>
           </div>
         </form>
       </section>
 
+      <!-- How SightLine Works Strip -->
+      <section class="how-strip" aria-label="SightLine audit methodology">
+        <div class="how-strip-inner">
+          <span class="how-label">How SightLine works:</span>
+          <span class="how-step"><span class="step-num">1</span> Measure with Playwright/AST</span>
+          <span class="how-arrow" aria-hidden="true">→</span>
+          <span class="how-step"><span class="step-num">2</span> Review with Gemma 4</span>
+          <span class="how-arrow" aria-hidden="true">→</span>
+          <span class="how-step"><span class="step-num">3</span> Verify in browser</span>
+        </div>
+      </section>
+
       <!-- Progress Area -->
       <section id="progress-area" class="card progress-card hidden" role="status" aria-live="polite">
-        <div class="spinner-row">
+        <div class="progress-header-row">
           <div class="spinner" aria-hidden="true"></div>
           <div class="progress-details">
             <h2 id="progress-status-text" class="progress-title">Analyzing target...</h2>
             <p id="progress-step-text" class="progress-sub">Initializing browser snapshot and automated tests...</p>
           </div>
         </div>
+
+        <div class="stepper-bar" id="stepper-bar">
+          <div class="step-item step-pending" data-step="init"><span class="step-dot"></span><span class="step-text">Setup</span></div>
+          <div class="step-item step-pending" data-step="checks"><span class="step-dot"></span><span class="step-text">Checks</span></div>
+          <div class="step-item step-pending" data-step="gemma"><span class="step-dot"></span><span class="step-text">Gemma</span></div>
+          <div class="step-item step-pending" data-step="verify"><span class="step-dot"></span><span class="step-text">Verify</span></div>
+          <div class="step-item step-pending" data-step="done"><span class="step-dot"></span><span class="step-text">Done</span></div>
+        </div>
+
         <ol id="steps-list" class="steps-list" aria-label="Audit progress steps"></ol>
+
+        <!-- Skeleton Placeholders -->
+        <div id="skeleton-container" class="skeleton-container">
+          <div class="skeleton-card">
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line long"></div>
+            <div class="skeleton-line medium"></div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line long"></div>
+            <div class="skeleton-line medium"></div>
+          </div>
+        </div>
       </section>
 
       <!-- Empty State -->
       <section id="empty-state" class="card empty-state-card">
-        <div class="empty-icon" aria-hidden="true">🔍</div>
+        <div class="empty-icon-wrap" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <line x1="11" y1="8" x2="11" y2="14"></line>
+            <line x1="8" y1="11" x2="14" y2="11"></line>
+          </svg>
+        </div>
         <h2 class="empty-title">Ready to Inspect</h2>
         <p class="empty-desc">
-          Enter a website URL or GitHub repository above to run automated WCAG and code quality checks,
-          enriched and evidenced with Google Gemma 4 analysis.
+          Enter a website URL or GitHub repository to run automated WCAG 2.2 checks,
+          enriched with Google Gemma 4 analysis and verified headless browser fixes.
         </p>
-        <button id="quick-demo-btn" type="button" class="btn btn-outline">
-          Explore Sample Results (?demo=1)
-        </button>
+        <div class="empty-actions">
+          <button id="quick-demo-btn" type="button" class="btn btn-outline">
+            Sample Website Audit (?demo=site)
+          </button>
+          <button id="quick-demo-repo-btn" type="button" class="btn btn-secondary">
+            Sample Repo Audit (?demo=repo)
+          </button>
+        </div>
       </section>
 
       <!-- Results Container -->
@@ -110,11 +206,22 @@
         <!-- Target Header & Summary -->
         <header class="results-header">
           <div>
-            <span id="result-badge-mode" class="badge badge-subtle">Website</span>
+            <div class="result-badge-row">
+              <span id="result-badge-mode" class="badge badge-subtle">Website</span>
+              <span id="partial-badge" class="badge badge-warning hidden">Gemma is still reviewing...</span>
+            </div>
             <h2 id="results-heading" class="results-title">Analysis Results</h2>
             <a id="results-url-link" href="#" target="_blank" rel="noopener noreferrer" class="results-url">https://example.com</a>
           </div>
         </header>
+
+        <!-- Partial Results Notification Banner -->
+        <div id="partial-banner" class="partial-banner hidden" role="status">
+          <div class="spinner-sm" aria-hidden="true"></div>
+          <div class="partial-banner-text">
+            <strong>Gemma is still reviewing...</strong> Displaying initial measured checks. Full report will update automatically.
+          </div>
+        </div>
 
         <!-- Repository Summary Block (repo mode) -->
         <section id="repo-summary-card" class="card summary-card hidden" aria-labelledby="summary-heading">
@@ -125,11 +232,25 @@
         <!-- Annotated Screenshot View (site mode) -->
         <section id="screenshot-card" class="card screenshot-card hidden" aria-labelledby="screenshot-heading">
           <div class="card-header">
-            <h3 id="screenshot-heading" class="card-title">Annotated Visual Snapshot</h3>
-            <span class="badge badge-info">Elements Marked</span>
+            <div class="screenshot-title-row">
+              <h3 id="screenshot-heading" class="card-title">Annotated Visual Snapshot</h3>
+              <span class="badge badge-info">Interactive Overlays</span>
+            </div>
+            <span class="screenshot-hint">Click any finding below to locate it on the screenshot</span>
           </div>
-          <div class="screenshot-wrapper">
-            <img id="annotated-image" src="" alt="Annotated screenshot with marked visual hierarchy and contrast defects" class="screenshot-img">
+          <div id="screenshot-container" class="screenshot-container">
+            <div id="screenshot-wrapper" class="screenshot-wrapper">
+              <img id="annotated-image" src="" alt="Annotated screenshot with marked visual hierarchy and contrast defects" class="screenshot-img">
+              <div id="screenshot-overlay" class="screenshot-overlay" aria-hidden="true"></div>
+            </div>
+            <div id="screenshot-placeholder" class="screenshot-placeholder hidden" role="status">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <p>Screenshot unavailable</p>
+            </div>
           </div>
         </section>
 
@@ -151,6 +272,49 @@
             <div class="stat-num" id="stat-verified">0</div>
             <div class="stat-label">Verified Fixes</div>
           </div>
+        </section>
+
+        <!-- Collapsible Explainer: "How to read these results" -->
+        <section id="explainer-section" class="card explainer-card" aria-labelledby="explainer-heading">
+          <details id="explainer-details">
+            <summary id="explainer-heading" class="explainer-summary">
+              <span class="explainer-summary-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                How to read these results
+              </span>
+              <span class="explainer-toggle-text">Toggle guide</span>
+            </summary>
+            <div class="explainer-content">
+              <div class="explainer-item">
+                <div class="explainer-badge-wrap">
+                  <span class="badge badge-measured">Measured</span>
+                </div>
+                <div class="explainer-desc">
+                  <strong>Measured:</strong> Found by deterministic automated rules (contrast math, HTML parsing). 100% confidence.
+                </div>
+              </div>
+              <div class="explainer-item">
+                <div class="explainer-badge-wrap">
+                  <span class="badge badge-ai">AI-suggested</span>
+                </div>
+                <div class="explainer-desc">
+                  <strong>AI (Gemma):</strong> Found by Google Gemma 4 inspecting the page and code. Evidenced by element number or exact code quote.
+                </div>
+              </div>
+              <div class="explainer-item">
+                <div class="explainer-badge-wrap">
+                  <span class="badge badge-verified">Verified fix</span>
+                </div>
+                <div class="explainer-desc">
+                  <strong>Verified:</strong> SightLine applied the fix in a headless browser and re-checked. The problem is confirmed resolved.
+                </div>
+              </div>
+            </div>
+          </details>
         </section>
 
         <!-- Filter Chips -->
@@ -177,7 +341,7 @@
 
     <!-- Accessible Notification Toast -->
     <div id="toast" class="toast hidden" role="status" aria-live="polite">
-      <span id="toast-message">Issue copied to clipboard!</span>
+      <span id="toast-message">Copied to clipboard!</span>
     </div>
   </div>
 
