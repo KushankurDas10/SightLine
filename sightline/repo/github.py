@@ -74,6 +74,20 @@ def parse_repo_url(url: str) -> tuple[str, str]:
     return owner, repo
 
 
+def format_count(n: int | float | None) -> str:
+    """Format counts into human-friendly strings (e.g. 1234 -> '1.2k', 0 -> '0')."""
+    if n is None or n <= 0:
+        return "0"
+    val = int(n)
+    if val >= 1_000_000:
+        formatted = f"{val / 1_000_000:.1f}"
+        return f"{formatted[:-2] if formatted.endswith('.0') else formatted}M"
+    if val >= 1_000:
+        formatted = f"{val / 1_000:.1f}"
+        return f"{formatted}k"
+    return str(val)
+
+
 def _decode_content(data: Any, raw_text: str = "") -> str:
     """Decode file content from GitHub API response (base64 or plain string)."""
     if isinstance(data, dict) and "content" in data:
@@ -175,6 +189,21 @@ def fetch(
         homepage = repo_data.get("homepage")
         default_branch = repo_data.get("default_branch") or "main"
 
+        # Stars, forks, language, license, issues, pushed_at, html_url
+        stars = int(repo_data.get("stargazers_count") or 0)
+        forks = int(repo_data.get("forks_count") or 0)
+        language = repo_data.get("language")
+        open_issues = int(repo_data.get("open_issues_count") or 0)
+        pushed_at = repo_data.get("pushed_at")
+        html_url = repo_data.get("html_url") or f"https://github.com/{owner}/{repo}"
+
+        license_data = repo_data.get("license")
+        license_name: str | None = None
+        if isinstance(license_data, dict):
+            spdx = license_data.get("spdx_id")
+            name = license_data.get("name")
+            license_name = spdx if (spdx and spdx != "NOASSERTION") else (name or spdx)
+
         # 2. Fetch recursive git tree
         tree_url = (
             f"https://api.github.com/repos/{owner}/{repo}/git/trees/{default_branch}?recursive=1"
@@ -255,6 +284,13 @@ def fetch(
             truncated=truncated,
             readme=readme,
             key_files=key_files,
+            stars=stars,
+            forks=forks,
+            language=language,
+            license_name=license_name,
+            open_issues=open_issues,
+            pushed_at=pushed_at,
+            html_url=html_url,
         )
 
     finally:

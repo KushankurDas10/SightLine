@@ -101,10 +101,14 @@ def test_frontend_demo(web_server):
         highlight_box = page.locator(".screenshot-highlight-box")
         assert highlight_box.is_visible()
 
-        # 7. No console errors
+        # 7. Website mode shows NO repo card
+        repo_card = page.locator("#repo-card")
+        assert not repo_card.is_visible()
+
+        # 8. No console errors
         assert console_errors == [], f"Detected console errors: {console_errors}"
 
-        # 8. Test client-side error banner displays on invalid submission
+        # 9. Test client-side error banner displays on invalid submission
         page.fill("#url-input", "invalid-plain-text")
         page.click("#analyze-btn")
         page.wait_for_selector("#error-banner:not(.hidden)", timeout=2000)
@@ -120,8 +124,8 @@ def test_frontend_demo(web_server):
 
 @pytest.mark.browser
 def test_frontend_repo_demo(web_server):
-    """Loads ?demo=repo, verifies 'Copy as GitHub issue' buttons are present,
-    and no screenshot is shown.
+    """Loads ?demo=repo, verifies repo card with star count is present,
+    'Copy as GitHub issue' buttons are present, and no screenshot is shown.
     """
     console_errors: list[str] = []
 
@@ -140,7 +144,18 @@ def test_frontend_repo_demo(web_server):
         page.goto(f"{web_server}/?demo=repo")
         page.wait_for_selector(".finding-card", timeout=5000)
 
-        # 1. "Copy as GitHub issue" buttons are present
+        # 1. Repo card with star count is visible
+        page.wait_for_selector("#repo-card:not(.hidden)", timeout=2000)
+        repo_card = page.locator("#repo-card")
+        assert repo_card.is_visible()
+        repo_card_text = repo_card.inner_text()
+        assert "octocat/Hello-World" in repo_card_text
+        assert "2.5k" in repo_card_text or "2,450" in repo_card_text
+        stars_pill = page.locator(".repo-fact-stars")
+        assert stars_pill.is_visible()
+        assert "2,450 stars" in (stars_pill.get_attribute("aria-label") or "")
+
+        # 2. "Copy as GitHub issue" buttons are present
         cards = page.query_selector_all(".finding-card")
         assert len(cards) > 0
         copy_buttons = page.query_selector_all(".copy-issue-btn")
@@ -151,11 +166,11 @@ def test_frontend_repo_demo(web_server):
         page.wait_for_selector(".btn-copy.copied", timeout=2000)
         assert "Copied" in copy_buttons[0].inner_text()
 
-        # 2. No screenshot is shown (screenshot card is hidden)
+        # 3. No screenshot is shown (screenshot card is hidden)
         screenshot_card = page.locator("#screenshot-card")
         assert not screenshot_card.is_visible()
 
-        # 3. No console errors
+        # 4. No console errors
         assert console_errors == [], f"Detected console errors: {console_errors}"
 
         browser.close()
@@ -218,5 +233,69 @@ def test_filter_chips_interaction(web_server):
         page.wait_for_timeout(200)
         all_cards = page.query_selector_all(".finding-card")
         assert len(all_cards) == initial_count
+
+        browser.close()
+
+
+@pytest.mark.browser
+def test_frontend_compare_images(web_server):
+    """Verify ?demo=site shows comparison images with naturalWidth > 0, makes NO /files requests,
+    and produces no console errors. Also test native dialog enlargement and Esc key closing.
+    """
+    console_errors: list[str] = []
+    files_requests: list[str] = []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        page.on(
+            "console",
+            lambda msg: console_errors.append(f"Console {msg.type}: {msg.text}")
+            if msg.type == "error"
+            else None,
+        )
+        page.on("pageerror", lambda err: console_errors.append(f"PageError: {err}"))
+        page.on(
+            "request",
+            lambda req: files_requests.append(req.url) if "/files/" in req.url else None,
+        )
+
+        page.goto(f"{web_server}/?demo=site")
+        page.wait_for_selector(".finding-card", timeout=5000)
+
+        # 1. Comparison images exist and are loaded with naturalWidth > 0
+        page.wait_for_selector(".compare-preview-img", timeout=5000)
+        imgs = page.locator(".compare-preview-img")
+        img_count = imgs.count()
+        assert img_count >= 3, f"Expected at least 3 comparison images, got {img_count}"
+
+        for i in range(img_count):
+            img = imgs.nth(i)
+            natural_w = img.evaluate("el => el.naturalWidth")
+            assert natural_w > 0, (
+                f"Expected comparison image #{i+1} naturalWidth > 0, got {natural_w}"
+            )
+
+        # 2. Click to enlarge opens native <dialog>
+        first_btn = page.locator(".compare-img-btn").first
+        first_btn.click()
+        page.wait_for_selector("#compare-modal[open]", timeout=2000)
+        dialog = page.locator("#compare-modal")
+        assert dialog.is_visible()
+        modal_eval = "() => document.getElementById('compare-modal-img').naturalWidth"
+        modal_img_w = page.evaluate(modal_eval)
+        assert modal_img_w > 0
+
+        # 3. Pressing Escape closes dialog
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(200)
+        assert not dialog.is_visible()
+
+        # 4. Demo mode must never call /files
+        assert files_requests == [], f"Demo mode made unexpected /files requests: {files_requests}"
+
+        # 5. No console errors
+        assert console_errors == [], f"Detected console errors: {console_errors}"
 
         browser.close()

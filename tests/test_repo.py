@@ -238,3 +238,84 @@ def test_fetch_live_hello_world():
     assert snapshot.readme is not None
     assert len(snapshot.readme) > 0
     assert len(snapshot.files) > 0
+
+
+def test_fetch_with_mock_transport_fills_new_fields():
+    """Verify fetch() populates stars, forks, language, license, issues, pushed_at, html_url."""
+    from sightline.repo.github import format_count
+
+    repo_meta = {
+        "description": "Mocked test repo",
+        "homepage": "https://example.org",
+        "default_branch": "main",
+        "stargazers_count": 1234,
+        "forks_count": 456,
+        "language": "Python",
+        "license": {"spdx_id": "MIT", "name": "MIT License"},
+        "open_issues_count": 5,
+        "pushed_at": "2026-09-01T00:00:00Z",
+        "html_url": "https://github.com/test-org/test-repo",
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url_str = str(request.url)
+        if url_str == "https://api.github.com/repos/test-org/test-repo":
+            return httpx.Response(200, json=repo_meta)
+        if url_str == "https://api.github.com/repos/test-org/test-repo/git/trees/main?recursive=1":
+            return httpx.Response(200, json={"tree": [], "truncated": False})
+        if url_str == "https://api.github.com/repos/test-org/test-repo/readme":
+            return httpx.Response(404, json={"message": "Not Found"})
+        return httpx.Response(404, json={"message": "Not Found"})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    snapshot = fetch("https://github.com/test-org/test-repo", client=client)
+
+    assert snapshot.stars == 1234
+    assert snapshot.forks == 456
+    assert snapshot.language == "Python"
+    assert snapshot.license_name == "MIT"
+    assert snapshot.open_issues == 5
+    assert snapshot.pushed_at == "2026-09-01T00:00:00Z"
+    assert snapshot.html_url == "https://github.com/test-org/test-repo"
+    assert format_count(snapshot.stars) == "1.2k"
+
+
+def test_fetch_missing_fields_defaults():
+    """Verify fetch() handles responses with missing metadata fields without crashing."""
+    repo_meta = {}  # completely empty metadata
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url_str = str(request.url)
+        if url_str == "https://api.github.com/repos/test-org/test-repo":
+            return httpx.Response(200, json=repo_meta)
+        if url_str == "https://api.github.com/repos/test-org/test-repo/git/trees/main?recursive=1":
+            return httpx.Response(200, json={"tree": [], "truncated": False})
+        if url_str == "https://api.github.com/repos/test-org/test-repo/readme":
+            return httpx.Response(404, json={"message": "Not Found"})
+        return httpx.Response(404, json={"message": "Not Found"})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    snapshot = fetch("https://github.com/test-org/test-repo", client=client)
+
+    assert snapshot.stars == 0
+    assert snapshot.forks == 0
+    assert snapshot.language is None
+    assert snapshot.license_name is None
+    assert snapshot.open_issues == 0
+    assert snapshot.pushed_at is None
+    assert snapshot.html_url == "https://github.com/test-org/test-repo"
+
+
+def test_format_count_helper():
+    """Verify format_count converts numeric counts to compact strings."""
+    from sightline.repo.github import format_count
+
+    assert format_count(1234) == "1.2k"
+    assert format_count(0) == "0"
+    assert format_count(999) == "999"
+    assert format_count(1000) == "1.0k"
+    assert format_count(2450) == "2.5k"
+    assert format_count(12500) == "12.5k"
+    assert format_count(1200000) == "1.2M"
+    assert format_count(None) == "0"
+    assert format_count(-10) == "0"

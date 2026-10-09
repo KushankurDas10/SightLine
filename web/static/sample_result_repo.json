@@ -82,5 +82,17 @@
       "low": 0
     },
     "verified": 1
+  },
+  "repo_info": {
+    "owner": "octocat",
+    "name": "Hello-World",
+    "description": "My first repository on GitHub! Hello World is a repository with guides.",
+    "stars": 2450,
+    "forks": 1820,
+    "language": "Python",
+    "license_name": null,
+    "open_issues": 12,
+    "pushed_at": "2026-09-15T12:00:00Z",
+    "html_url": "https://github.com/octocat/Hello-World"
   }
 }

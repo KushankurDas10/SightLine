@@ -54,6 +54,13 @@ class RepoSnapshot:
     truncated: bool
     readme: str | None
     key_files: dict[str, str] = field(default_factory=dict)
+    stars: int = 0
+    forks: int = 0
+    language: str | None = None
+    license_name: str | None = None
+    open_issues: int = 0
+    pushed_at: str | None = None
+    html_url: str = ""
 
 
 @dataclass
@@ -77,6 +84,8 @@ class Finding:
     file_path: str | None = None
     verified: bool = False
     verified_note: str | None = None
+    compare_image: str | None = None
+    compare_note: str | None = None
 
 
 @dataclass
@@ -91,6 +100,7 @@ class AnalysisResult:
     issues: dict[str, str] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
     stats: dict[str, Any] = field(default_factory=dict)
+    repo_info: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert result to a plain JSON-serializable dictionary."""

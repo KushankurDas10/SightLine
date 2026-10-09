@@ -1,6 +1,9 @@
 """Tests for sightline.site.verify fix verification."""
 
+import re
+
 import pytest
+from PIL import Image
 
 from sightline.models import Finding, PageSnapshot
 from sightline.site.capture import capture
@@ -191,7 +194,10 @@ def test_verify_fixes_exceeds_10_limit(monkeypatch):
 
 @pytest.mark.browser
 def test_verify_fixes_page_html_all_three_planted_problems(fixtures_server, tmp_path):
-    """Verify all 3 planted problems on page.html are verified after applying sensible fixes."""
+    """Verify all 3 planted problems on page.html are verified after applying sensible fixes,
+    generate comparison images that open with Pillow, show real before/after notes,
+    and unverified findings have no compare_image.
+    """
     page_url = f"{fixtures_server}/page.html"
     snapshot = capture(page_url, out_dir=tmp_path)
     findings = run_site_checks(snapshot)
@@ -206,13 +212,54 @@ def test_verify_fixes_page_html_all_three_planted_problems(fixtures_server, tmp_
     missing_name.fix_value = "Settings Action"
     small_target.fix_value = "24px"
 
-    updated_findings = verify_fixes(page_url, snapshot, findings)
+    # Add an unverified finding (invalid fix value)
+    unverified = Finding(
+        id="site-unverified-099",
+        source="measured",
+        target="site",
+        rule="missing-name",
+        severity="high",
+        problem="Icon button with invalid fix",
+        why_it_matters="A11y",
+        fix="Add name",
+        fix_value="   ",
+        element_number=missing_name.element_number,
+    )
+    findings.append(unverified)
 
-    # All 3 planted problems must be verified
+    updated_findings = verify_fixes(page_url, snapshot, findings, out_dir=tmp_path)
+
     for f in updated_findings:
-        if f.rule in ("low-contrast", "missing-name", "small-target"):
+        if f.id == "site-unverified-099":
+            assert f.verified is False
+            assert f.compare_image is None
+        elif f.rule in ("low-contrast", "missing-name", "small-target"):
             assert f.verified is True
             assert f.verified_note == "re-checked after applying the fix"
+            assert f.compare_image is not None
+            assert f.compare_image.startswith("/files/")
+            assert f.compare_image.endswith(f"compare/{f.id}.png")
+
+            # compare_image file exists on disk and opens with Pillow
+            img_file = tmp_path / "compare" / f"{f.id}.png"
+            assert img_file.is_file(), f"Comparison image {img_file} should exist"
+            with Image.open(img_file) as img:
+                assert img.width > 0
+                assert img.height > 0
+
+            # compare_note shows the real before and after values
+            assert f.compare_note is not None
+            if f.rule == "small-target":
+                match = re.search(r"->\s*(\d+)x(\d+)\s*px", f.compare_note)
+                assert match is not None, f"Expected -> WxH in {f.compare_note}"
+                after_w = int(match.group(1))
+                assert after_w >= 24, f"Expected after width >= 24, got {after_w}"
+            elif f.rule == "low-contrast":
+                assert "Contrast" in f.compare_note
+                assert "->" in f.compare_note
+            elif f.rule == "missing-name":
+                assert "Accessible name" in f.compare_note
+                assert "Settings Action" in f.compare_note
 
 
 @pytest.mark.browser
@@ -230,11 +277,13 @@ def test_verify_fixes_invalid_hex_does_not_verify_or_crash(fixtures_server, tmp_
     # Invalid fix_value: empty
     missing_name.fix_value = "   "
 
-    updated = verify_fixes(page_url, snapshot, findings)
+    updated = verify_fixes(page_url, snapshot, findings, out_dir=tmp_path)
     assert len(updated) > 0
 
     assert low_contrast.verified is False
     assert "not a 6-digit hex color" in low_contrast.verified_note
+    assert low_contrast.compare_image is None
 
     assert missing_name.verified is False
     assert "invalid or empty fix_value" in missing_name.verified_note
+    assert missing_name.compare_image is None

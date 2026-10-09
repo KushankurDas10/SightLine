@@ -33,6 +33,7 @@ def test_pipeline_site_mode(fixtures_server, tmp_path):
     ]
     assert steps == expected_steps
     assert result.mode == "site"
+    assert result.repo_info is None
     assert (tmp_path / "result.json").exists()
     assert (tmp_path / "annotated.png").exists()
 
@@ -89,6 +90,10 @@ def test_pipeline_repo_mode(monkeypatch, tmp_path):
     assert len(result.issues) == len(result.findings)
     assert "timings" in result.stats
     assert "total" in result.stats["timings"]
+    assert result.repo_info is not None
+    assert result.repo_info["owner"] == "mock-org"
+    assert result.repo_info["name"] == "mock-repo"
+    assert result.repo_info["description"] == "A mock repository for testing"
 
 
 def test_pipeline_gemma_none_fallback(monkeypatch, tmp_path):

@@ -27,7 +27,9 @@
       },
       "file_path": null,
       "verified": true,
-      "verified_note": "re-checked after applying the fix"
+      "verified_note": "re-checked after applying the fix",
+      "compare_image": "/static/demo/compare_site-001.png",
+      "compare_note": "Contrast 1.5:1 -> 17.7:1"
     },
     {
       "id": "site-002",
@@ -51,7 +53,9 @@
       },
       "file_path": null,
       "verified": true,
-      "verified_note": "re-checked after applying the fix"
+      "verified_note": "re-checked after applying the fix",
+      "compare_image": "/static/demo/compare_site-002.png",
+      "compare_note": "Accessible name: None -> \"Settings\""
     },
     {
       "id": "site-003",
@@ -75,7 +79,9 @@
       },
       "file_path": null,
       "verified": true,
-      "verified_note": "re-checked after applying the fix"
+      "verified_note": "re-checked after applying the fix",
+      "compare_image": "/static/demo/compare_site-003.png",
+      "compare_note": "Target size 10x10 px -> 24x24 px"
     }
   ],
   "issues": {

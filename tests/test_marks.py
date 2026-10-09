@@ -5,7 +5,13 @@ from pathlib import Path
 from PIL import Image
 
 from sightline.models import Box, Element, Finding, PageSnapshot
-from sightline.site.marks import DEFAULT_MARK_COLOR, SEVERITY_COLORS, annotate, mark_elements
+from sightline.site.marks import (
+    DEFAULT_MARK_COLOR,
+    SEVERITY_COLORS,
+    annotate,
+    compose_comparison,
+    mark_elements,
+)
 
 
 def test_mark_elements_crop_and_borders(tmp_path):
@@ -184,3 +190,59 @@ def test_annotate_findings_by_severity(tmp_path):
 
     # Other areas remain untouched
     assert annotated_img.getpixel((500, 500)) == (255, 255, 255)
+
+
+def test_compose_comparison_size_and_pixel_colors():
+    """Verify compose_comparison returns expected dimensions with red pixels on left and green."""
+    before_img = Image.new("RGB", (200, 120), color=(255, 255, 255))
+    after_img = Image.new("RGB", (200, 120), color=(255, 255, 255))
+    before_box = Box(20, 20, 50, 40)
+    after_box = Box(20, 20, 60, 50)
+
+    composed = compose_comparison(
+        before_img=before_img,
+        after_img=after_img,
+        before_box=before_box,
+        after_box=after_box,
+        rule="small-target",
+        note="Target size 10x10 px -> 24x24 px",
+    )
+
+    assert composed is not None
+    # panel_w = 200, divider_w = 2, total_w = 402; panel_h = 120, header_h = 28, caption_h = 32
+    assert composed.size == (402, 180)
+
+    # Check for red pixels on left half (panel_w = 200)
+    left_half = composed.crop((0, 0, 200, composed.height))
+    left_pixels = list(left_half.getdata())
+    has_red = any(r > 180 and g < 60 and b < 60 for (r, g, b) in left_pixels)
+    assert has_red, "Expected red pixels on left half of comparison image"
+
+    # Check for green pixels on right half (panel_w + divider_w = 202 to 402)
+    right_half = composed.crop((202, 0, 402, composed.height))
+    right_pixels = list(right_half.getdata())
+    has_green = any(g > 140 and g > r + 40 and g > b + 40 for (r, g, b) in right_pixels)
+    assert has_green, "Expected green pixels on right half of comparison image"
+
+
+def test_compose_comparison_box_outside_or_zero_size_returns_none():
+    """Verify box outside the image or zero size returns None without raising."""
+    before_img = Image.new("RGB", (200, 120), color=(255, 255, 255))
+    after_img = Image.new("RGB", (200, 120), color=(255, 255, 255))
+
+    b_ok = Box(10, 10, 30, 30)
+
+    # Zero width / zero height
+    assert compose_comparison(before_img, after_img, Box(10, 10, 0, 30), b_ok, "rule") is None
+    assert compose_comparison(before_img, after_img, b_ok, Box(10, 10, 30, 0), "rule") is None
+
+    # Negative width / height
+    assert compose_comparison(before_img, after_img, Box(10, 10, -5, 30), b_ok, "rule") is None
+
+    # Box outside image bounds
+    assert compose_comparison(before_img, after_img, Box(300, 300, 20, 20), b_ok, "rule") is None
+    assert compose_comparison(before_img, after_img, b_ok, Box(500, 50, 30, 30), "rule") is None
+
+    # None boxes or None images
+    assert compose_comparison(before_img, after_img, None, b_ok, "rule") is None
+    assert compose_comparison(None, after_img, b_ok, b_ok, "rule") is None
